@@ -1,0 +1,1577 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin Dashboard — JumpStart{% endblock %}
+
+{% block content %}
+<div x-data="adminDashboard()" class="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+
+  <!-- ══ LEFT SIDEBAR ════════════════════════════════════════════════════ -->
+  <aside class="w-56 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col">
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-brand-orange flex items-center justify-center">
+          <span class="text-white font-bold text-xs">JS</span>
+        </div>
+        <span class="font-display font-bold text-brand-navy dark:text-white text-sm">Admin Panel</span>
+      </div>
+    </div>
+    <nav class="flex-1 px-3 py-3 space-y-0.5">
+      <button @click="page='overview'; loadOverview()" :class="page==='overview' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
+      </button>
+      <button @click="page='ai_performance'; loadAiPerf()" :class="page==='ai_performance' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="brain-circuit" class="w-4 h-4"></i> AI Performance
+      </button>
+      <button @click="page='products'; loadProducts()" :class="page==='products' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="package" class="w-4 h-4"></i> Products
+      </button>
+      <button @click="page='knowledge'; loadKnowledge()" :class="page==='knowledge' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="book-open" class="w-4 h-4"></i> Knowledge Base
+      </button>
+      <button @click="page='feedback'; loadFeedback()" :class="page==='feedback' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="thumbs-up" class="w-4 h-4"></i> Feedback
+      </button>
+      <button @click="page='cases'; loadCases()" :class="page==='cases' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Cases & Handovers
+      </button>
+      <button @click="page='audit'; loadAudit()" :class="page==='audit' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="scroll-text" class="w-4 h-4"></i> Audit Log
+      </button>
+      <button @click="page='users'; loadUsers()" :class="page==='users' ? 'nav-item active' : 'nav-item'" class="w-full text-left">
+        <i data-lucide="users-round" class="w-4 h-4"></i> User Management
+      </button>
+    </nav>
+    <div class="px-3 py-3 border-t border-gray-100 dark:border-gray-800">
+      <button onclick="authManager.logout()" class="nav-item w-full text-left text-red-600 dark:text-red-400">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ════════════════════════════════════════════════════ -->
+  <main class="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
+
+    <!-- ── OVERVIEW ──────────────────────────────────────────────────── -->
+    <div x-show="page === 'overview'" class="p-8">
+      <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Overview</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">System health and key performance metrics.</p>
+
+      <!-- Loading skeleton -->
+      <template x-if="overviewLoading">
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+          <template x-for="i in 6">
+            <div class="skeleton h-28 rounded-2xl"></div>
+          </template>
+        </div>
+      </template>
+
+      <!-- KPI cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+        <template x-for="kpi in kpiCards" :key="kpi.key">
+          <div class="card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <div :class="kpi.iconBg" class="w-10 h-10 rounded-xl flex items-center justify-center">
+                <i :data-lucide="kpi.icon" :class="kpi.iconColor" class="w-5 h-5"></i>
+              </div>
+              <span :class="kpi.trend > 0 ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30' : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30'"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                <i :data-lucide="kpi.trend >= 0 ? 'trending-up' : 'trending-down'" class="w-3 h-3"></i>
+                <span x-text="Math.abs(kpi.trend) + '%'"></span>
+              </span>
+            </div>
+            <p class="text-3xl font-display font-bold text-gray-900 dark:text-white count-up" :data-target="kpi.value" x-text="kpi.display"></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="kpi.label"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Charts row: Handover Rate trend + Sentiment Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Handover rate line chart (canvas-based) -->
+        <div class="card p-6">
+          <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Handover Rate (7d)</h3>
+          <canvas id="handover-chart" height="180"></canvas>
+        </div>
+        <!-- Sentiment donut -->
+        <div class="card p-6">
+          <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Sentiment Breakdown</h3>
+          <div class="flex items-center gap-6">
+            <canvas id="sentiment-chart" width="140" height="140"></canvas>
+            <div class="space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">Positive</span>
+                <span class="font-bold text-gray-900 dark:text-white ml-auto" x-text="overview.sentiment_positive + '%'">–</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-gray-400"></span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">Neutral</span>
+                <span class="font-bold text-gray-900 dark:text-white ml-auto" x-text="overview.sentiment_neutral + '%'">–</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">Negative</span>
+                <span class="font-bold text-gray-900 dark:text-white ml-auto" x-text="overview.sentiment_negative + '%'">–</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AI PERFORMANCE ─────────────────────────────────────────────── -->
+    <div x-show="page === 'ai_performance'" class="p-8">
+      <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">AI Performance</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">LLM confidence, intent accuracy, and RAG retrieval metrics.</p>
+
+      <!-- RAG metrics gauges -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <template x-for="m in ragMetrics" :key="m.label">
+          <div class="card p-5 text-center">
+            <div class="relative w-20 h-20 mx-auto mb-3">
+              <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                <circle cx="18" cy="18" r="15.9155" fill="none"
+                        :stroke="m.value >= 0.8 ? '#22c55e' : m.value >= 0.6 ? '#f59e0b' : '#ef4444'"
+                        stroke-width="3" stroke-dasharray="100" :stroke-dashoffset="100 - m.value * 100"
+                        class="transition-all duration-700" style="stroke-linecap: round"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="(m.value * 100).toFixed(0) + '%'"></span>
+              </div>
+            </div>
+            <p class="text-xs font-semibold text-gray-900 dark:text-white" x-text="m.label"></p>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="m.description"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Confidence trend chart -->
+      <div class="card p-6 mb-6">
+        <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Confidence Trend (7d)</h3>
+        <canvas id="confidence-chart" height="160"></canvas>
+      </div>
+
+      <!-- Per-intent table -->
+      <div class="card p-6">
+        <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Per-Intent Breakdown</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100 dark:border-gray-800">
+                <th class="text-left py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Intent</th>
+                <th class="text-right py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sessions</th>
+                <th class="text-right py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Confidence</th>
+                <th class="text-right py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Handover Rate</th>
+                <th class="text-right py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Turns</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+              <template x-for="row in intentBreakdown" :key="row.intent">
+                <tr>
+                  <td class="py-2.5"><span class="badge-navy text-xs" x-text="row.intent"></span></td>
+                  <td class="py-2.5 text-right text-gray-900 dark:text-white font-medium" x-text="row.count"></td>
+                  <td class="py-2.5 text-right">
+                    <span :class="row.avg_confidence >= 0.8 ? 'conf-high' : row.avg_confidence >= 0.65 ? 'conf-medium' : 'conf-low'"
+                          class="font-mono font-semibold" x-text="(row.avg_confidence * 100).toFixed(0) + '%'"></span>
+                  </td>
+                  <td class="py-2.5 text-right text-gray-700 dark:text-gray-300" x-text="(row.handover_rate * 100).toFixed(0) + '%'"></td>
+                  <td class="py-2.5 text-right text-gray-700 dark:text-gray-300" x-text="row.avg_turns.toFixed(1)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRODUCTS ──────────────────────────────────────────────────── -->
+    <div x-show="page === 'products'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Products</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Add, edit, and remove items from the storefront catalog.</p>
+        </div>
+        <button @click="openProductModal()" class="btn-primary">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add Product
+        </button>
+      </div>
+
+      <!-- Products table -->
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 w-16"></th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Product</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Price</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <template x-if="productsLoading">
+              <template x-for="i in 4">
+                <tr>
+                  <td colspan="7" class="px-4 py-3"><div class="skeleton h-8 rounded w-full"></div></td>
+                </tr>
+              </template>
+            </template>
+            <template x-for="p in products" :key="p.id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-4 py-3">
+                  <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center shrink-0">
+                    <template x-if="p.image">
+                      <img :src="p.image" :alt="p.name" class="w-full h-full object-cover">
+                    </template>
+                    <template x-if="!p.image">
+                      <i data-lucide="image-off" class="w-4 h-4 text-gray-400"></i>
+                    </template>
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-900 dark:text-white truncate max-w-xs" x-text="p.name"></p>
+                  <p class="text-xs text-gray-400" x-text="p.slug"></p>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="badge-navy text-xs" x-text="categoryName(p.category)"></span>
+                </td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300" x-text="'£' + p.price"></td>
+                <td class="px-4 py-3 text-right" :class="p.stock === 0 ? 'text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300'" x-text="p.stock"></td>
+                <td class="px-4 py-3">
+                  <span :class="p.is_active ? 'badge-green' : 'badge-gray'" class="text-xs" x-text="p.is_active ? 'Active' : 'Inactive'"></span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click="openProductModal(p)" class="btn-ghost text-xs py-1 px-2"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button @click="deleteProduct(p)" class="btn-ghost text-xs py-1 px-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+            <template x-if="!productsLoading && products.length === 0">
+              <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400">No products yet — add your first one.</td></tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PRODUCT ADD/EDIT MODAL ───────────────────────────────────────── -->
+    <div x-show="productModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         @click.self="productModalOpen = false">
+      <div class="card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-display font-bold text-lg text-gray-900 dark:text-white" x-text="productForm.id ? 'Edit Product' : 'Add Product'"></h3>
+          <button @click="productModalOpen = false" class="btn-ghost p-1.5 rounded-lg"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <form @submit.prevent="saveProduct()" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+            <input x-model="productForm.name" type="text" required class="input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Slug</label>
+            <input x-model="productForm.slug" type="text" required class="input" placeholder="unique-url-slug">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category</label>
+            <select x-model="productForm.category" class="input" required>
+              <option value="" disabled>Select category</option>
+              <template x-for="c in categories" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Short Description</label>
+            <input x-model="productForm.short_description" type="text" class="input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
+            <textarea x-model="productForm.description" rows="3" required class="input"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Price</label>
+              <input x-model="productForm.price" type="number" step="0.01" required class="input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Original Price</label>
+              <input x-model="productForm.original_price" type="number" step="0.01" class="input">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Stock</label>
+              <input x-model="productForm.stock" type="number" required class="input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Image URL</label>
+              <input x-model="productForm.image" type="text" class="input" placeholder="products/example.jpg">
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input x-model="productForm.is_featured" type="checkbox" class="rounded"> Featured
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input x-model="productForm.is_active" type="checkbox" class="rounded"> Active
+            </label>
+          </div>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" :disabled="productSaving" class="btn-primary">
+              <span x-show="!productSaving" x-text="productForm.id ? 'Save Changes' : 'Create Product'"></span>
+              <span x-show="productSaving">Saving...</span>
+            </button>
+            <button type="button" @click="productModalOpen = false" class="btn-ghost">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── KNOWLEDGE BASE ─────────────────────────────────────────────── -->
+    <div x-show="page === 'knowledge'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Knowledge Base</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Upload and manage documents for RAG retrieval.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div>
+            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Topic for upload</label>
+            <select x-model="uploadTopic" class="input text-sm py-2">
+              <option value="general">General FAQ</option>
+              <option value="returns">Returns &amp; Refunds</option>
+              <option value="delivery">Delivery &amp; Shipping</option>
+              <option value="payments">Payments</option>
+              <option value="warranty">Warranty</option>
+              <option value="products">Products</option>
+              <option value="orders">Orders</option>
+              <option value="store_info">Store Information</option>
+              <option value="promotions">Promotions</option>
+              <option value="support">Support Scripts</option>
+            </select>
+          </div>
+          <label class="btn-primary cursor-pointer self-end">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            Upload Document
+            <input type="file" class="sr-only" @change="uploadFile($event)" accept=".pdf,.docx,.txt,.csv">
+          </label>
+        </div>
+      </div>
+
+      <!-- Upload progress -->
+      <template x-if="uploadProgress > 0">
+        <div class="card p-4 mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <i data-lucide="file-up" class="w-4 h-4 text-brand-orange"></i>
+            <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="uploadingFile"></p>
+            <span class="ml-auto text-xs text-gray-500" x-text="uploadProgress + '%'"></span>
+          </div>
+          <div class="h-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+            <div :style="'width: ' + uploadProgress + '%'"
+                 class="h-2 bg-brand-orange rounded-full transition-all duration-300"></div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Drop zone -->
+      <div @dragover.prevent="dragOver = true" @dragleave="dragOver = false"
+           @drop.prevent="dropFile($event)"
+           :class="dragOver ? 'border-brand-orange bg-brand-orange/5' : 'border-gray-300 dark:border-gray-700'"
+           class="border-2 border-dashed rounded-2xl p-8 mb-6 text-center transition-all duration-200 cursor-pointer"
+           x-data="{ dragOver: false }"
+           @click="$refs.fileInput.click()">
+        <input type="file" x-ref="fileInput" class="sr-only" @change="uploadFile($event)" accept=".pdf,.docx,.txt,.csv">
+        <i data-lucide="cloud-upload" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
+        <p class="font-medium text-gray-700 dark:text-gray-300 text-sm">Drop files here or <span class="text-brand-orange">browse</span></p>
+        <p class="text-xs text-gray-400 mt-1">PDF, DOCX, TXT, CSV — max 20MB</p>
+      </div>
+
+      <!-- Documents table -->
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Title</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Topic</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Usage</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <template x-if="knowledgeLoading">
+              <template x-for="i in 4">
+                <tr>
+                  <td colspan="5" class="px-4 py-3"><div class="skeleton h-8 rounded w-full"></div></td>
+                </tr>
+              </template>
+            </template>
+            <template x-for="doc in documents" :key="doc.id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-900 dark:text-white truncate max-w-xs" x-text="doc.title"></p>
+                  <p class="text-xs text-gray-400" x-text="formatDate(doc.upload_date)"></p>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="badge-navy text-xs capitalize" x-text="doc.topic"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="doc.status === 'approved' ? 'badge-green' : doc.status === 'pending' ? 'badge-amber' : doc.status === 'rejected' ? 'badge-red' : 'badge-gray'"
+                        class="text-xs capitalize" x-text="doc.status"></span>
+                </td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300" x-text="doc.usage_count || 0"></td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click="previewDoc(doc)" class="btn-ghost text-xs py-1 px-2"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
+                    <template x-if="doc.status === 'pending'">
+                      <button @click="approveDoc(doc)" class="text-xs px-2 py-1 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Approve</button>
+                    </template>
+                    <template x-if="doc.status === 'approved'">
+                      <button @click="disableDoc(doc)" class="text-xs px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 transition-colors">Disable</button>
+                    </template>
+                    <template x-if="doc.status === 'disabled'">
+                      <button @click="approveDoc(doc)" class="text-xs px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 transition-colors">Re-enable</button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── FEEDBACK ──────────────────────────────────────────────────── -->
+    <div x-show="page === 'feedback'" class="p-8">
+      <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Feedback & Quality</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">Customer satisfaction and AI response quality review.</p>
+
+      <!-- Summary row -->
+      <div class="grid grid-cols-3 gap-5 mb-8">
+        <div class="card p-5 text-center">
+          <p class="text-3xl font-bold text-green-600 dark:text-green-400" x-text="feedbackStats.positive_pct + '%'">–</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">👍 Helpful</p>
+        </div>
+        <div class="card p-5 text-center">
+          <p class="text-3xl font-bold text-red-500 dark:text-red-400" x-text="feedbackStats.negative_pct + '%'">–</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">👎 Not Helpful</p>
+        </div>
+        <div class="card p-5 text-center">
+          <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="feedbackStats.total">–</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Total Reviews</p>
+        </div>
+      </div>
+
+      <!-- Negative feedback table -->
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display font-semibold text-gray-900 dark:text-white">Flagged for Review</h3>
+          <span class="badge-red text-xs" x-text="feedback.filter(f => !f.reviewed).length + ' unreviewed'"></span>
+        </div>
+        <div class="space-y-3">
+          <template x-for="f in feedback" :key="f.id">
+            <div :class="f.reviewed ? 'opacity-50' : ''"
+                 class="border border-gray-100 dark:border-gray-800 rounded-xl p-4 transition-all">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge-red text-xs">👎 Not Helpful</span>
+                    <span class="text-xs text-gray-400" x-text="formatDate(f.submitted_at)"></span>
+                    <template x-if="f.reason">
+                      <span class="badge-gray text-xs" x-text="f.reason"></span>
+                    </template>
+                  </div>
+                  <p class="text-sm text-gray-700 dark:text-gray-300" x-text="f.session_summary || 'Customer support session'"></p>
+                  <p class="text-xs text-gray-400 mt-1">Support type: <span class="font-medium capitalize" x-text="f.support_type?.replace('_', ' ').toLowerCase()"></span></p>
+                </div>
+                <template x-if="!f.reviewed">
+                  <button @click="markReviewed(f)" class="btn-ghost text-xs py-1.5 px-3 shrink-0">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i> Mark Reviewed
+                  </button>
+                </template>
+                <template x-if="f.reviewed">
+                  <span class="badge-green text-xs shrink-0">Reviewed</span>
+                </template>
+              </div>
+            </div>
+          </template>
+          <template x-if="feedback.length === 0 && !feedbackLoading">
+            <div class="text-center py-8">
+              <i data-lucide="smile" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
+              <p class="text-sm text-gray-400">No feedback to review</p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CASES & HANDOVERS ────────────────────────────────────────── -->
+    <div x-show="page === 'cases'" class="p-8">
+      <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Cases & Handovers</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">Analytics on AI handovers, staff workload, and peak hours.</p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Handover rate trend -->
+        <div class="card p-6">
+          <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Handover Trend (7d)</h3>
+          <canvas id="handover-trend-chart" height="200"></canvas>
+        </div>
+        <!-- Handover reasons donut -->
+        <div class="card p-6">
+          <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Handover Reasons</h3>
+          <div class="flex items-center gap-4">
+            <canvas id="handover-reasons-chart" width="160" height="160"></canvas>
+            <div class="space-y-2 flex-1">
+              <template x-for="(reason, i) in handoverReasons" :key="reason.label">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-sm shrink-0" :style="'background: ' + reasonColors[i % reasonColors.length]"></span>
+                  <span class="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate" x-text="reason.label.replace('_',' ')"></span>
+                  <span class="text-xs font-bold text-gray-900 dark:text-white" x-text="reason.count"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Staff workload bar chart -->
+      <div class="card p-6 mb-6">
+        <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Staff Workload</h3>
+        <canvas id="staff-workload-chart" height="180"></canvas>
+      </div>
+
+      <!-- Peak hours heatmap -->
+      <div class="card p-6">
+        <h3 class="font-display font-semibold text-gray-900 dark:text-white mb-4">Peak Chat Hours</h3>
+        <div class="overflow-x-auto">
+          <div class="min-w-[600px]">
+            <!-- Day labels -->
+            <div class="flex gap-1 mb-1 pl-14">
+              <template x-for="h in hours24" :key="h">
+                <div class="flex-1 text-center text-xs text-gray-400" x-text="h % 3 === 0 ? h + 'h' : ''"></div>
+              </template>
+            </div>
+            <template x-for="(day, di) in heatmapDays" :key="day">
+              <div class="flex items-center gap-1 mb-1">
+                <span class="w-12 text-xs text-gray-500 dark:text-gray-400 text-right pr-2 shrink-0" x-text="day"></span>
+                <template x-for="(h, hi) in hours24" :key="h">
+                  <div class="flex-1 h-7 rounded-sm cursor-pointer transition-all hover:opacity-80"
+                       :title="day + ' ' + h + ':00 — ' + (heatmap[di]?.[hi] || 0) + ' chats'"
+                       :style="'background: ' + heatColor(heatmap[di]?.[hi] || 0)">
+                  </div>
+                </template>
+              </div>
+            </template>
+            <!-- Legend -->
+            <div class="flex items-center gap-2 mt-3 pl-14">
+              <span class="text-xs text-gray-400">Less</span>
+              <template x-for="l in [0,2,4,6,8,10]">
+                <div class="w-6 h-4 rounded-sm" :style="'background: ' + heatColor(l)"></div>
+              </template>
+              <span class="text-xs text-gray-400">More</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT LOG ─────────────────────────────────────────────────── -->
+    <div x-show="page === 'audit'" class="p-8">
+      <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">Audit Log</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">Complete agent action history for each session.</p>
+
+      <!-- Search -->
+      <div class="flex gap-3 mb-6">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input x-model="auditSearch" @input.debounce.500ms="loadAudit()" type="text"
+                 placeholder="Search by session ID, customer..." class="input pl-9">
+        </div>
+        <input type="date" x-model="auditDate" @change="loadAudit()" class="input w-auto py-2.5">
+      </div>
+
+      <div class="space-y-3">
+        <template x-if="auditLoading">
+          <template x-for="i in 5">
+            <div class="skeleton h-16 rounded-xl"></div>
+          </template>
+        </template>
+        <template x-for="session in auditSessions" :key="session.id">
+          <div x-data="{open: false}" @click.away="if (open) { open = false; closeAuditSocket(); }" class="card overflow-hidden">
+            <div @click="open = !open; if (open) { loadAuditDetail(session); openAuditSocket(session); } else { closeAuditSocket(); }"
+                 class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="w-8 h-8 rounded-lg bg-brand-navy/10 dark:bg-brand-navy/30 flex items-center justify-center shrink-0">
+                  <i data-lucide="message-square" class="w-4 h-4 text-brand-navy dark:text-blue-400"></i>
+                </div>
+                <!-- Headline is the customer + a message preview, not the raw
+                     session UUID — this is what makes the list read as a set
+                     of CONVERSATIONS to pick from, not anonymous log rows. -->
+                <div class="min-w-0">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white truncate"
+                     x-text="'Conversation with ' + (session.customer_name || session.customer_username || 'Unknown customer')"></p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs"
+                     x-text="session.last_message ? session.last_message.content : 'No messages yet'"></p>
+                </div>
+                <div class="hidden sm:block shrink-0">
+                  <p class="text-xs text-gray-400" x-text="formatDate(session.started_at)"></p>
+                  <p class="text-xs text-gray-400 font-mono" x-text="session.id.toString().substring(0,8) + '...'"></p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span :class="{
+                  'badge-green': session.state === 'RESOLVED',
+                  'badge-orange': session.state === 'AI_ACTIVE',
+                  'badge-amber': session.state === 'WAITING_FOR_STAFF',
+                  'badge-navy': session.state === 'HUMAN_ACTIVE'
+                }" class="text-xs" x-text="session.state.replace('_',' ')"></span>
+                <button @click.stop="deleteSession(session)"
+                        title="Delete this conversation"
+                        class="btn-ghost p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+                <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+              </div>
+            </div>
+
+            <!-- Expanded audit trail: one card per customer turn, showing exactly
+                 what the AI detected/did/decided for that message. -->
+            <div x-show="open" x-collapse class="border-t border-gray-100 dark:border-gray-800">
+              <template x-if="!session.turns">
+                <div class="p-4 text-center text-sm text-gray-400">Loading agent log...</div>
+              </template>
+              <div class="divide-y divide-gray-50 dark:divide-gray-800">
+                <template x-for="turn in (session.turns || [])" :key="turn.message_id">
+                  <div class="px-4 py-5">
+                    <div class="flex items-center justify-between mb-3">
+                      <p class="text-sm text-gray-800 dark:text-gray-200 font-semibold truncate max-w-md" x-text="turn.customer_text || ('Message #' + turn.message_id)"></p>
+                      <span class="text-xs text-gray-400 shrink-0" x-text="formatTime(turn.created_at)"></span>
+                    </div>
+
+                    <!-- Every field is always rendered with an explicit label
+                         and an honest "None" fallback — nothing disappears
+                         silently, so the admin can log/evaluate every turn
+                         in full, not just the turns that happened to have data. -->
+                    <dl class="text-sm rounded-xl bg-gray-50 dark:bg-gray-900/40 p-4"
+                        style="display:grid; grid-template-columns: 150px 1fr; row-gap: 12px; column-gap: 16px; align-items: start;">
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Detected Intent</dt>
+                      <dd class="flex flex-wrap gap-1.5">
+                        <template x-for="intent in turn.intents" :key="intent">
+                          <span class="badge-navy text-xs" x-text="intent"></span>
+                        </template>
+                        <span x-show="!turn.intents || turn.intents.length === 0" class="text-gray-400">None detected</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Customer Goal</dt>
+                      <dd class="text-gray-700 dark:text-gray-300" x-text="turn.customer_goal || '—'"></dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Sentiment</dt>
+                      <dd>
+                        <span :class="turn.sentiment === 'negative' ? 'badge-red' : turn.sentiment === 'positive' ? 'badge-green' : 'badge-gray'"
+                              class="text-xs" x-text="turn.sentiment || 'unknown'"></span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Extracted Details</dt>
+                      <dd class="text-gray-700 dark:text-gray-300 space-y-1">
+                        <template x-for="[k, v] in Object.entries(turn.entities || {})" :key="k">
+                          <div><span class="text-gray-400" x-text="labelize(k) + ':'"></span> <span x-text="v"></span></div>
+                        </template>
+                        <span x-show="Object.keys(turn.entities || {}).length === 0" class="text-gray-400">None extracted</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Follow-up Asked</dt>
+                      <dd>
+                        <span x-show="turn.requested_clarification" class="badge-amber text-xs"
+                              x-text="'Needed: ' + (turn.clarification_missing_fields || []).map(labelize).join(', ')"
+                              title="No tool was called this turn — the AI asked a follow-up question instead of guessing missing details."></span>
+                        <span x-show="!turn.requested_clarification" class="text-gray-400">No</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Tool Called</dt>
+                      <dd class="space-y-3">
+                        <template x-for="tr in turn.tool_results" :key="tr.tool_name">
+                          <div>
+                            <span class="badge-orange text-xs" x-text="tr.tool_name"></span>
+                            <span :class="tr.success ? 'badge-green' : 'badge-red'" class="text-xs ml-1" x-text="tr.success ? 'succeeded' : 'failed'"></span>
+                            <div class="mt-1.5 pl-2 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
+                              <template x-for="[k, v] in toolResultEntries(tr.output)" :key="k">
+                                <div><span class="text-gray-400" x-text="labelize(k) + ':'"></span> <span class="text-gray-700 dark:text-gray-300" x-text="v"></span></div>
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                        <span x-show="!turn.tool_results || turn.tool_results.length === 0" class="text-gray-400">None — no tool was needed this turn</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Knowledge Search</dt>
+                      <dd class="text-gray-700 dark:text-gray-300">
+                        <template x-if="turn.rag && turn.rag.length > 0">
+                          <span x-text="(turn.rag[0].similarity_scores?.length || 0) + ' passage(s) found, best match ' + (Math.max(...(turn.rag[0].similarity_scores || [0])) * 100).toFixed(0) + '% similar'"></span>
+                        </template>
+                        <span x-show="!turn.rag || turn.rag.length === 0" class="text-gray-400">Not used this turn</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">AI Confidence</dt>
+                      <dd>
+                        <span x-show="turn.confidence_band"
+                              :class="turn.confidence_band === 'HIGH' ? 'conf-high' : turn.confidence_band === 'MEDIUM' ? 'conf-medium' : 'conf-low'"
+                              class="font-mono text-xs px-2 py-0.5 rounded-full border"
+                              x-text="turn.confidence_band + ' (' + (turn.confidence !== null ? (turn.confidence*100).toFixed(0)+'%' : '—') + ')'"></span>
+                        <span x-show="!turn.confidence_band" class="text-gray-400">Not computed this turn</span>
+                      </dd>
+
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">Escalated to Human</dt>
+                      <dd>
+                        <span x-show="turn.requires_handover" class="badge-red text-xs" x-text="(turn.handover_reason || 'yes').replace('_',' ')"></span>
+                        <span x-show="turn.injection_blocked" class="badge-orange text-xs">blocked (prompt injection) — not escalated</span>
+                        <span x-show="!turn.requires_handover && !turn.injection_blocked" class="text-gray-400">No</span>
+                      </dd>
+                    </dl>
+                  </div>
+                </template>
+                <template x-if="session.turns && session.turns.length === 0">
+                  <div class="p-4 text-center text-sm text-gray-400">No agent log recorded for this session.</div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template x-if="!auditLoading && auditSessions.length === 0">
+          <div class="text-center py-12">
+            <i data-lucide="search-x" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
+            <p class="text-sm text-gray-400">No sessions found</p>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── USER MANAGEMENT ──────────────────────────────────────────────── -->
+    <div x-show="page === 'users'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white mb-1">User Management</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Manage customer, staff, and admin accounts.</p>
+        </div>
+        <button @click="openUserModal()" class="btn-primary">
+          <i data-lucide="user-plus" class="w-4 h-4"></i> Add User
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex gap-3 mb-6">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input x-model="userSearch" @input.debounce.500ms="loadUsers()" type="text"
+                 placeholder="Search by username, email, name..." class="input pl-9">
+        </div>
+        <select x-model="userRoleFilter" @change="loadUsers()" class="input w-auto py-2.5">
+          <option value="">All roles</option>
+          <option value="customer">Customer</option>
+          <option value="staff">Support Staff</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+
+      <!-- Users table -->
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">User</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Role</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Joined</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <template x-if="usersLoading">
+              <template x-for="i in 4">
+                <tr>
+                  <td colspan="6" class="px-4 py-3"><div class="skeleton h-8 rounded w-full"></div></td>
+                </tr>
+              </template>
+            </template>
+            <template x-for="u in users" :key="u.id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-900 dark:text-white" x-text="(u.first_name || u.last_name) ? (u.first_name + ' ' + u.last_name).trim() : u.username"></p>
+                  <p class="text-xs text-gray-400" x-text="'@' + u.username"></p>
+                </td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300" x-text="u.email"></td>
+                <td class="px-4 py-3">
+                  <span :class="{
+                    'badge-navy': u.role === 'customer',
+                    'badge-orange': u.role === 'staff',
+                    'badge-green': u.role === 'admin'
+                  }" class="text-xs capitalize" x-text="u.role"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="u.is_active ? 'badge-green' : 'badge-gray'" class="text-xs" x-text="u.is_active ? 'Active' : 'Disabled'"></span>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400" x-text="formatDate(u.date_joined)"></td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click="openUserModal(u)" class="btn-ghost text-xs py-1 px-2" title="Edit"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button @click="toggleUserActive(u)" class="btn-ghost text-xs py-1 px-2" :title="u.is_active ? 'Disable account' : 'Re-enable account'">
+                      <i :data-lucide="u.is_active ? 'ban' : 'check-circle'" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button @click="deleteUser(u)" class="btn-ghost text-xs py-1 px-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+            <template x-if="!usersLoading && users.length === 0">
+              <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400">No users found.</td></tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ADD/EDIT USER MODAL ────────────────────────────────────────── -->
+    <div x-show="userModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         @click.self="userModalOpen = false">
+      <div class="card w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-display font-bold text-lg text-gray-900 dark:text-white" x-text="userForm.id ? 'Edit User' : 'Add User'"></h3>
+          <button @click="userModalOpen = false" class="btn-ghost p-1.5 rounded-lg"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <form @submit.prevent="saveUser()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
+              <input x-model="userForm.first_name" type="text" class="input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
+              <input x-model="userForm.last_name" type="text" class="input">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+            <input x-model="userForm.username" type="text" required :disabled="!!userForm.id" class="input disabled:opacity-60">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+            <input x-model="userForm.email" type="email" required class="input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Phone</label>
+            <input x-model="userForm.phone" type="text" class="input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Role</label>
+            <select x-model="userForm.role" class="input" required>
+              <option value="customer">Customer</option>
+              <option value="staff">Support Staff</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <template x-if="!userForm.id">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+              <input x-model="userForm.password" type="password" required minlength="8" class="input">
+            </div>
+          </template>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" :disabled="userSaving" class="btn-primary">
+              <span x-show="!userSaving" x-text="userForm.id ? 'Save Changes' : 'Create User'"></span>
+              <span x-show="userSaving">Saving...</span>
+            </button>
+            <button type="button" @click="userModalOpen = false" class="btn-ghost">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Document preview modal -->
+<div x-data x-show="$store.adminModal.show"
+     @click.self="$store.adminModal.show = false"
+     @keydown.escape.window="$store.adminModal.show = false"
+     class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-panel w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+      <h3 class="font-display font-bold text-gray-900 dark:text-white" x-text="$store.adminModal.title">Preview</h3>
+      <button @click="$store.adminModal.show = false" class="btn-ghost p-2"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6 scrollbar-thin">
+      <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed"
+           x-text="$store.adminModal.content"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm/delete modal (replaces window.confirm for destructive actions) -->
+<div x-data x-show="$store.confirmModal.show" x-cloak
+     @click.self="$store.confirmModal.show = false"
+     @keydown.escape.window="$store.confirmModal.show = false"
+     class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-panel w-full max-w-sm p-6">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+        <i data-lucide="triangle-alert" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+      </div>
+      <div>
+        <h3 class="font-display font-bold text-gray-900 dark:text-white" x-text="$store.confirmModal.title">Are you sure?</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="$store.confirmModal.message"></p>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-3">
+      <button @click="$store.confirmModal.show = false" class="btn-ghost">Cancel</button>
+      <button @click="$store.confirmModal.onConfirm(); $store.confirmModal.show = false"
+              class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+        <span x-text="$store.confirmModal.confirmLabel || 'Delete'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.store('adminModal', { show: false, title: '', content: '' });
+  Alpine.store('confirmModal', {
+    show: false, title: '', message: '', confirmLabel: 'Delete', onConfirm: () => {},
+    open({ title, message, confirmLabel, onConfirm }) {
+      this.title = title || 'Are you sure?';
+      this.message = message || '';
+      this.confirmLabel = confirmLabel || 'Delete';
+      this.onConfirm = onConfirm || (() => {});
+      this.show = true;
+    },
+  });
+});
+
+function adminDashboard() {
+  return {
+    page: 'overview',
+    overview: {},
+    overviewLoading: true,
+    kpiCards: [],
+    products: [],
+    categories: [],
+    productsLoading: false,
+    productModalOpen: false,
+    productForm: {},
+    productSaving: false,
+    documents: [],
+    knowledgeLoading: false,
+    feedback: [],
+    feedbackStats: { positive_pct: 0, negative_pct: 0, total: 0 },
+    feedbackLoading: false,
+    auditSessions: [],
+    auditLoading: false,
+    auditSearch: '',
+    auditDate: '',
+    auditSocket: null,
+    auditSocketSessionId: null,
+    handoverReasons: [],
+    heatmap: [],
+    staffWorkload: [],
+    heatmapDays: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    hours24: Array.from({length: 24}, (_, i) => i),
+    reasonColors: ['#FF6B35','#1A2B4A','#FFD700','#22c55e','#ef4444','#6366f1','#f59e0b'],
+    uploadProgress: 0,
+    uploadingFile: '',
+    uploadTopic: 'general',
+    ragMetrics: [],
+    intentBreakdown: [],
+    users: [],
+    usersLoading: false,
+    userSearch: '',
+    userRoleFilter: '',
+    userModalOpen: false,
+    userForm: {},
+    userSaving: false,
+
+    async init() {
+      // The live audit socket only makes sense while an audit row is expanded
+      // — close it whenever navigation leaves the Audit Log page entirely.
+      this.$watch('page', (p) => {
+        if (p !== 'audit') this.closeAuditSocket();
+      });
+      await this.loadOverview();
+    },
+
+    async loadOverview() {
+      this.overviewLoading = true;
+      const res = await authManager.apiFetch('/api/staff/overview/');
+      if (res.ok) {
+        const d = await res.json();
+        this.overview = d;
+        this.kpiCards = [
+          { key: 'total_chats', label: 'Total Chats Today', value: d.chats_today || 0, display: d.chats_today || 0, icon: 'message-circle', iconBg: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600 dark:text-blue-400', trend: 0 },
+          { key: 'ai_resolution', label: 'AI Resolution Rate', value: d.ai_resolution_rate, display: (d.ai_resolution_rate || 0) + '%', icon: 'bot', iconBg: 'bg-green-50 dark:bg-green-950/30', iconColor: 'text-green-600 dark:text-green-400', trend: 0 },
+          { key: 'avg_confidence', label: 'Avg AI Confidence', value: d.avg_confidence, display: ((d.avg_confidence || 0) * 100).toFixed(0) + '%', icon: 'gauge', iconBg: 'bg-brand-orange/10', iconColor: 'text-brand-orange', trend: 0 },
+          { key: 'handover_rate', label: 'Handover Rate', value: d.handover_rate, display: (d.handover_rate || 0) + '%', icon: 'users', iconBg: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600 dark:text-amber-400', trend: 0 },
+          { key: 'active_staff', label: 'Active Staff', value: d.active_staff || 0, display: d.active_staff || 0, icon: 'headphones', iconBg: 'bg-purple-50 dark:bg-purple-950/30', iconColor: 'text-purple-600 dark:text-purple-400', trend: 0 },
+          { key: 'resolved', label: 'Resolved Today', value: d.resolved_today || 0, display: d.resolved_today || 0, icon: 'check-circle', iconBg: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600 dark:text-teal-400', trend: 0 },
+        ];
+        this.$nextTick(() => { this.drawOverviewCharts(); lucide.createIcons(); });
+      }
+      this.overviewLoading = false;
+    },
+
+    drawOverviewCharts() {
+      // Handover trend line chart (pure canvas, no external lib needed)
+      const canvas = document.getElementById('handover-chart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const data = this.overview.handover_trend_7d && this.overview.handover_trend_7d.length ? this.overview.handover_trend_7d : [0,0,0,0,0,0,0];
+      this.drawLineChart(ctx, data, canvas.offsetWidth, 180, '#FF6B35');
+
+      // Sentiment donut
+      const dCanvas = document.getElementById('sentiment-chart');
+      if (!dCanvas) return;
+      const dCtx = dCanvas.getContext('2d');
+      const pos = this.overview.sentiment_positive ?? 0;
+      const neu = this.overview.sentiment_neutral ?? 0;
+      const neg = this.overview.sentiment_negative ?? 0;
+      // All-zero (no conversations yet/today) has nothing to divide a sweep
+      // angle by — draw a flat neutral ring instead of NaN slices.
+      if (pos + neu + neg === 0) {
+        this.drawDonut(dCtx, [1], ['#e5e7eb'], 140);
+      } else {
+        this.drawDonut(dCtx, [pos, neu, neg], ['#22c55e','#9ca3af','#ef4444'], 140);
+      }
+    },
+
+    drawLineChart(ctx, data, w, h, color) {
+      const padding = 30;
+      const max = Math.max(...data, 1);
+      ctx.canvas.width = w;
+      ctx.canvas.height = h;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      const step = (w - padding * 2) / (data.length - 1);
+      data.forEach((_, i) => {
+        const x = padding + i * step;
+        ctx.beginPath(); ctx.moveTo(x, padding); ctx.lineTo(x, h - padding); ctx.stroke();
+      });
+      // Gradient fill
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, color + '40');
+      grad.addColorStop(1, color + '00');
+      ctx.beginPath();
+      data.forEach((v, i) => {
+        const x = padding + i * step;
+        const y = h - padding - ((v / max) * (h - padding * 2));
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.lineTo(padding + (data.length - 1) * step, h - padding);
+      ctx.lineTo(padding, h - padding);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+      // Line
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      data.forEach((v, i) => {
+        const x = padding + i * step;
+        const y = h - padding - ((v / max) * (h - padding * 2));
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // Dots
+      data.forEach((v, i) => {
+        const x = padding + i * step;
+        const y = h - padding - ((v / max) * (h - padding * 2));
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.strokeStyle = color + '50'; ctx.lineWidth = 2; ctx.stroke();
+      });
+    },
+
+    drawDonut(ctx, values, colors, size) {
+      ctx.canvas.width = size;
+      ctx.canvas.height = size;
+      const cx = size / 2, cy = size / 2, r = size / 2 - 10;
+      const total = values.reduce((a, b) => a + b, 0);
+      let angle = -Math.PI / 2;
+      values.forEach((v, i) => {
+        const sweep = (v / total) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, angle, angle + sweep);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        angle += sweep;
+      });
+      // Centre hole
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('color-scheme') === 'dark' ? '#111827' : '#ffffff';
+      ctx.fill();
+    },
+
+    async loadAiPerf() {
+      const res = await authManager.apiFetch('/api/knowledge/rag-metrics/');
+      if (res.ok) {
+        const d = await res.json();
+        // Nullish coalescing (??), not || — a real 0 (e.g. after deleting all
+        // conversations) must not be silently replaced by a fallback number.
+        this.ragMetrics = [
+          { label: 'Recall@5', value: d.recall_at_5 ?? 0, description: 'Retrieved relevant chunks' },
+          { label: 'Precision@5', value: d.precision_at_5 ?? 0, description: 'Top chunks were relevant' },
+          { label: 'Faithfulness', value: d.faithfulness ?? 0, description: 'Answer grounded in sources' },
+          { label: 'Answer Relevancy', value: d.answer_relevancy ?? 0, description: 'Response matched query' },
+        ];
+        this.intentBreakdown = d.intent_breakdown ?? [];
+        this.$nextTick(() => {
+          const c = document.getElementById('confidence-chart');
+          if (c) this.drawLineChart(c.getContext('2d'), d.confidence_trend ?? [0,0,0,0,0,0,0], c.offsetWidth, 160, '#22c55e');
+          lucide.createIcons();
+        });
+      }
+    },
+
+    categoryName(id) {
+      return this.categories.find(c => c.id === id)?.name || '—';
+    },
+
+    async loadProducts() {
+      this.productsLoading = true;
+      if (this.categories.length === 0) {
+        const catRes = await authManager.apiFetch('/api/store/categories/');
+        if (catRes.ok) {
+          const catData = await catRes.json();
+          this.categories = catData.results || catData;
+        }
+      }
+      const res = await authManager.apiFetch('/api/store/admin/products/');
+      if (res.ok) {
+        const data = await res.json();
+        this.products = data.results || data;
+      }
+      this.productsLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openProductModal(product) {
+      this.productForm = product ? { ...product } : {
+        name: '', slug: '', category: '', short_description: '', description: '',
+        price: '', original_price: '', stock: 0, image: '',
+        is_featured: false, is_active: true,
+      };
+      this.productModalOpen = true;
+    },
+
+    async saveProduct() {
+      this.productSaving = true;
+      const isEdit = !!this.productForm.id;
+      const url = isEdit ? `/api/store/admin/products/${this.productForm.id}/` : '/api/store/admin/products/';
+      const res = await authManager.apiFetch(url, {
+        method: isEdit ? 'PATCH' : 'POST',
+        body: JSON.stringify(this.productForm),
+      });
+      if (res.ok) {
+        showToast(isEdit ? 'Product updated.' : 'Product created.', 'success');
+        this.productModalOpen = false;
+        await this.loadProducts();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(Object.values(err).flat().join(' ') || 'Could not save product.', 'error');
+      }
+      this.productSaving = false;
+    },
+
+    deleteProduct(product) {
+      Alpine.store('confirmModal').open({
+        title: 'Delete product?',
+        message: `Delete "${product.name}"? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        onConfirm: async () => {
+          const res = await authManager.apiFetch(`/api/store/admin/products/${product.id}/`, { method: 'DELETE' });
+          if (res.ok) {
+            showToast('Product deleted.', 'success');
+            this.products = this.products.filter(p => p.id !== product.id);
+          } else {
+            showToast('Could not delete product.', 'error');
+          }
+        },
+      });
+    },
+
+    async loadKnowledge() {
+      this.knowledgeLoading = true;
+      const res = await authManager.apiFetch('/api/knowledge/documents/');
+      if (res.ok) {
+        const data = await res.json();
+        this.documents = data.results || data;
+      }
+      this.knowledgeLoading = false;
+    },
+
+    async uploadFile(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      this.uploadingFile = file.name;
+      this.uploadProgress = 5;
+      const form = new FormData();
+      form.append('file', file);
+      form.append('title', file.name.replace(/\.[^.]+$/, ''));
+      form.append('topic', this.uploadTopic || 'general');
+      try {
+        const res = await fetch('/api/knowledge/documents/upload/', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + authManager.token },
+          body: form,
+        });
+        this.uploadProgress = 100;
+        if (res.ok) {
+          showToast('Document uploaded. Embeddings generating...', 'success');
+          await this.loadKnowledge();
+        } else {
+          showToast('Upload failed.', 'error');
+        }
+      } catch (err) {
+        showToast('Upload error: ' + err.message, 'error');
+      }
+      setTimeout(() => { this.uploadProgress = 0; this.uploadingFile = ''; }, 2000);
+    },
+
+    dropFile(e) {
+      const file = e.dataTransfer.files?.[0];
+      if (!file) return;
+      const fakeEvt = { target: { files: [file] } };
+      this.uploadFile(fakeEvt);
+    },
+
+    async approveDoc(doc) {
+      const res = await authManager.apiFetch(`/api/knowledge/documents/${doc.id}/approve/`, { method: 'PATCH' });
+      if (res.ok) { doc.status = 'approved'; showToast('Document approved and active.', 'success'); }
+    },
+
+    async disableDoc(doc) {
+      const res = await authManager.apiFetch(`/api/knowledge/documents/${doc.id}/disable/`, { method: 'PATCH' });
+      if (res.ok) { doc.status = 'disabled'; showToast('Document disabled.', 'info'); }
+    },
+
+    async previewDoc(doc) {
+      Alpine.store('adminModal').title = doc.title;
+      Alpine.store('adminModal').content = 'Loading preview...';
+      Alpine.store('adminModal').show = true;
+      const res2 = await authManager.apiFetch(`/api/knowledge/documents/${doc.id}/`);
+      if (res2.ok) {
+        const d = await res2.json();
+        Alpine.store('adminModal').content = d.extracted_text || d.content || 'No text content available.';
+      }
+    },
+
+    async loadFeedback() {
+      this.feedbackLoading = true;
+      const res = await authManager.apiFetch('/api/knowledge/feedback/');
+      if (res.ok) {
+        const data = await res.json();
+        const all = data.results || data;
+        this.feedback = all.filter(f => f.rating === 'negative');
+        const pos = all.filter(f => f.rating === 'positive').length;
+        const total = all.length;
+        this.feedbackStats = {
+          positive_pct: total ? Math.round(pos / total * 100) : 0,
+          negative_pct: total ? Math.round((total - pos) / total * 100) : 0,
+          total,
+        };
+      }
+      this.feedbackLoading = false;
+    },
+
+    async markReviewed(f) {
+      const res = await authManager.apiFetch(`/api/knowledge/feedback/${f.id}/reviewed/`, { method: 'PATCH' });
+      if (res.ok) f.reviewed = true;
+    },
+
+    async loadCases() {
+      const [queueRes, overviewRes] = await Promise.all([
+        authManager.apiFetch('/api/staff/queue/?state=RESOLVED'),
+        authManager.apiFetch('/api/staff/overview/'),
+      ]);
+      this.handoverReasons = [];
+      this.heatmap = [];
+      this.staffWorkload = [];
+      let handoverTrend = [];
+      if (queueRes.ok) {
+        const data = await queueRes.json();
+        const cases = data.results || data;
+        const reasonMap = {};
+        cases.forEach(c => {
+          const r = c.handover_reason || 'unknown';
+          reasonMap[r] = (reasonMap[r] || 0) + 1;
+        });
+        this.handoverReasons = Object.entries(reasonMap).map(([label, count]) => ({ label, count }));
+      }
+      if (overviewRes.ok) {
+        const d = await overviewRes.json();
+        // peak_hours from the backend is [weekday][hour]; heatmapDays is
+        // Mon-first, matching Python's date.weekday() (Mon=0).
+        this.heatmap = d.peak_hours || [];
+        this.staffWorkload = d.staff_workload || [];
+        handoverTrend = d.handover_trend_7d || [];
+      }
+      this.$nextTick(() => {
+        const c1 = document.getElementById('handover-trend-chart');
+        if (c1) this.drawLineChart(c1.getContext('2d'), handoverTrend.length ? handoverTrend : [0,0,0,0,0,0,0], c1.offsetWidth, 200, '#FF6B35');
+        const dCanvas = document.getElementById('handover-reasons-chart');
+        if (dCanvas) {
+          if (this.handoverReasons.length > 0) {
+            this.drawDonut(dCanvas.getContext('2d'), this.handoverReasons.map(r => r.count), this.reasonColors, 160);
+          } else {
+            this.drawDonut(dCanvas.getContext('2d'), [1], ['#e5e7eb'], 160);
+          }
+        }
+        const sCanvas = document.getElementById('staff-workload-chart');
+        if (sCanvas) this.drawBarChart(sCanvas.getContext('2d'), sCanvas.offsetWidth, 180, this.staffWorkload);
+        lucide.createIcons();
+      });
+    },
+
+    drawBarChart(ctx, w, h, data) {
+      data = (data && data.length) ? data : [];
+      if (data.length === 0) {
+        ctx.canvas.width = w; ctx.canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#9ca3af'; ctx.font = '13px Inter,sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('No staff activity yet', w / 2, h / 2);
+        return;
+      }
+      const padding = { l: 40, r: 20, t: 20, b: 40 };
+      ctx.canvas.width = w; ctx.canvas.height = h;
+      ctx.clearRect(0, 0, w, h);
+      const barW = (w - padding.l - padding.r) / data.length * 0.6;
+      const maxV = Math.max(...data.map(d => d.cases), 1);
+      data.forEach((d, i) => {
+        const x = padding.l + i * ((w - padding.l - padding.r) / data.length) + barW * 0.3;
+        const barH = (d.cases / maxV) * (h - padding.t - padding.b);
+        const y = h - padding.b - barH;
+        const grad = ctx.createLinearGradient(0, y, 0, h - padding.b);
+        grad.addColorStop(0, '#FF6B35'); grad.addColorStop(1, '#FF6B3590');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+        ctx.fill();
+        ctx.fillStyle = '#9ca3af'; ctx.font = '11px Inter,sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(d.label, x + barW / 2, h - padding.b + 16);
+        ctx.fillStyle = '#1A2B4A'; ctx.fillText(d.cases, x + barW / 2, y - 5);
+      });
+    },
+
+    heatColor(v) {
+      if (v === 0) return '#f3f4f6';
+      const p = Math.min(v / 12, 1);
+      const r = Math.round(255 * p + 229 * (1 - p));
+      const g = Math.round(107 * p + 231 * (1 - p));
+      const b = Math.round(53 * p + 235 * (1 - p));
+      return `rgb(${r},${g},${b})`;
+    },
+
+    async loadAudit() {
+      this.auditLoading = true;
+      const params = new URLSearchParams();
+      if (this.auditSearch) params.set('q', this.auditSearch);
+      if (this.auditDate) params.set('date', this.auditDate);
+      const res = await authManager.apiFetch(`/api/chat/sessions/?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        this.auditSessions = data.results || data;
+      }
+      this.auditLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    deleteSession(session) {
+      const label = session.customer_username || 'this customer';
+      Alpine.store('confirmModal').open({
+        title: 'Delete conversation?',
+        message: `Delete the conversation with ${label}? This permanently removes the chat history, agent log, and any related case. This cannot be undone.`,
+        confirmLabel: 'Delete',
+        onConfirm: async () => {
+          const res = await authManager.apiFetch(`/api/chat/sessions/${session.id}/`, { method: 'DELETE' });
+          if (res.ok) {
+            this.auditSessions = this.auditSessions.filter(s => s.id !== session.id);
+            showToast('Conversation deleted.', 'success');
+          } else {
+            showToast('Could not delete conversation.', 'error');
+          }
+        },
+      });
+    },
+
+    // Live updates for the currently-open session's audit trail. Only one
+    // socket is kept open at a time (matching only one card being expanded
+    // at once) — opening a new one always closes whatever was open before.
+    openAuditSocket(session) {
+      this.closeAuditSocket();
+      const token = authManager.token;
+      const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${wsScheme}://${window.location.host}/ws/admin/audit/${session.id}/?token=${token}`);
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'agent_action_update') {
+          this.loadAuditDetail(session);
+        }
+      };
+      this.auditSocket = ws;
+      this.auditSocketSessionId = session.id;
+    },
+
+    closeAuditSocket() {
+      if (this.auditSocket) {
+        this.auditSocket.close();
+        this.auditSocket = null;
+        this.auditSocketSessionId = null;
+      }
+    },
+
+    async loadAuditDetail(session) {
+      const [msgsRes, logRes] = await Promise.all([
+        authManager.apiFetch(`/api/chat/sessions/${session.id}/messages/`),
+        authManager.apiFetch(`/api/staff/sessions/${session.id}/agent-log/`),
+      ]);
+      const messagesById = {};
+      if (msgsRes.ok) {
+        const data = await msgsRes.json();
+        (data.results || data).forEach(m => { messagesById[m.id] = m; });
+      }
+      session.turns = [];
+      if (logRes.ok) {
+        const data = await logRes.json();
+        session.turns = (data.messages || [])
+          .map(t => ({ ...t, customer_text: messagesById[t.message_id]?.content || '' }))
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      }
+    },
+
+    // "order_number" -> "Order Number" — used everywhere raw entity/tool-result
+    // keys are shown, so the audit log reads as labelled fields, not a JSON dump.
+    labelize(key) {
+      return String(key).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    },
+
+    // Flattens a tool's raw output into [label, displayValue] pairs, skipping
+    // internal bookkeeping fields and rendering lists/objects readably instead
+    // of as a raw JSON string.
+    toolResultEntries(output) {
+      if (!output || typeof output !== 'object') return [];
+      const SKIP = new Set(['tool', 'success']);
+      return Object.entries(output)
+        .filter(([k, v]) => !SKIP.has(k) && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0))
+        .map(([k, v]) => {
+          if (Array.isArray(v)) {
+            if (v.length && typeof v[0] === 'object') {
+              return [k, v.map(item => item.name || item.product_name || JSON.stringify(item)).join(', ')];
+            }
+            return [k, v.join(', ')];
+          }
+          if (typeof v === 'object') return [k, JSON.stringify(v)];
+          return [k, String(v)];
+        });
+    },
+
+    async loadUsers() {
+      this.usersLoading = true;
+      const params = new URLSearchParams();
+      if (this.userSearch) params.set('q', this.userSearch);
+      if (this.userRoleFilter) params.set('role', this.userRoleFilter);
+      const res = await authManager.apiFetch(`/api/auth/admin/users/?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        this.users = data.results || data;
+      }
+      this.usersLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openUserModal(user) {
+      this.userForm = user ? { ...user, password: '' } : {
+        username: '', email: '', first_name: '', last_name: '', phone: '',
+        role: 'customer', password: '',
+      };
+      this.userModalOpen = true;
+    },
+
+    async saveUser() {
+      this.userSaving = true;
+      const isEdit = !!this.userForm.id;
+      const url = isEdit ? `/api/auth/admin/users/${this.userForm.id}/` : '/api/auth/admin/users/';
+      const payload = { ...this.userForm };
+      if (isEdit) delete payload.password; // editing never changes the password here
+      const res = await authManager.apiFetch(url, {
+        method: isEdit ? 'PATCH' : 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        showToast(isEdit ? 'User updated.' : 'User created.', 'success');
+        this.userModalOpen = false;
+        await this.loadUsers();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || Object.values(err).flat().join(' ') || 'Could not save user.', 'error');
+      }
+      this.userSaving = false;
+    },
+
+    async toggleUserActive(user) {
+      const res = await authManager.apiFetch(`/api/auth/admin/users/${user.id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !user.is_active }),
+      });
+      if (res.ok) {
+        user.is_active = !user.is_active;
+        showToast(user.is_active ? 'Account re-enabled.' : 'Account disabled.', 'success');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Could not update account.', 'error');
+      }
+    },
+
+    deleteUser(user) {
+      Alpine.store('confirmModal').open({
+        title: 'Delete user?',
+        message: `Delete the account "${user.username}"? This permanently removes the account along with their chat sessions and order history. This cannot be undone.`,
+        confirmLabel: 'Delete',
+        onConfirm: async () => {
+          const res = await authManager.apiFetch(`/api/auth/admin/users/${user.id}/`, { method: 'DELETE' });
+          if (res.ok) {
+            this.users = this.users.filter(u => u.id !== user.id);
+            showToast('User deleted.', 'success');
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Could not delete user.', 'error');
+          }
+        },
+      });
+    },
+
+    formatDate(dt) {
+      if (!dt) return '';
+      return new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    },
+
+    formatTime(dt) {
+      if (!dt) return '';
+      return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    },
+  };
+}
+</script>
+{% endblock %}

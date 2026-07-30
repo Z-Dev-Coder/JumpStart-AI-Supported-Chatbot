@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Staff Dashboard — JumpStart Support{% endblock %}
+
+{% block content %}
+<div x-data="staffDashboard()" class="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+
+  <!-- ══ COLUMN 1: QUEUE PANEL ════════════════════════════════════════════ -->
+  <aside class="w-80 shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-950">
+
+    <!-- Queue header -->
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+      <div class="flex items-center justify-between mb-3">
+        <h1 class="font-display font-bold text-gray-900 dark:text-white">Support Queue</h1>
+        <div class="flex items-center gap-1.5">
+          <span :class="wsConnected ? 'bg-green-500' : 'bg-red-500'" class="w-2 h-2 rounded-full"></span>
+          <span class="text-xs text-gray-500 dark:text-gray-400" x-text="wsConnected ? 'Live' : 'Offline'"></span>
+        </div>
+      </div>
+      <!-- Queue tabs -->
+      <div class="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <button @click="queueTab='waiting'"
+                :class="queueTab==='waiting' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+          Waiting
+          <span x-show="waitingCases.length > 0"
+                class="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold"
+                x-text="waitingCases.length"></span>
+        </button>
+        <button @click="queueTab='active'"
+                :class="queueTab==='active' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+          Active
+          <span x-show="activeCases.length > 0"
+                class="w-5 h-5 rounded-full bg-brand-orange text-white text-xs flex items-center justify-center font-bold"
+                x-text="activeCases.length"></span>
+        </button>
+        <button @click="queueTab='resolved'"
+                :class="queueTab==='resolved' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">
+          Resolved
+        </button>
+      </div>
+    </div>
+
+    <!-- Queue cases list -->
+    <div class="flex-1 overflow-y-auto scrollbar-thin py-2">
+
+      <!-- Loading skeleton -->
+      <template x-if="queueLoading">
+        <div class="px-3 space-y-2">
+          <template x-for="i in 4">
+            <div class="skeleton h-28 rounded-xl w-full"></div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Waiting tab -->
+      <template x-if="queueTab === 'waiting'">
+        <div>
+          <template x-if="waitingCases.length === 0">
+            <div class="text-center py-12 px-4">
+              <i data-lucide="inbox" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+              <p class="text-sm text-gray-500 dark:text-gray-400">No cases waiting</p>
+            </div>
+          </template>
+          <template x-for="c in waitingCases" :key="c.id">
+            <div @click="selectCase(c)"
+                 :class="selectedCase?.id === c.id ? 'border-brand-orange bg-brand-orange/5 dark:bg-brand-orange/10' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'"
+                 class="mx-3 my-1 border rounded-xl p-3 cursor-pointer transition-all duration-200">
+              <!-- Case card top row -->
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="min-w-0">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white truncate"
+                     x-text="c.customer_name || 'Customer'"></p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5"
+                     x-text="c.customer_goal || c.handover_reason"></p>
+                </div>
+                <!-- Wait time badge -->
+                <span :class="c.wait_minutes > 10 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : c.wait_minutes > 5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                      class="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
+                      x-text="c.wait_minutes + 'm'"></span>
+              </div>
+              <!-- Indicators row -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Sentiment dot -->
+                <div class="flex items-center gap-1">
+                  <span :class="c.sentiment === 'negative' ? 'bg-red-500' : c.sentiment === 'positive' ? 'bg-green-500' : 'bg-gray-400'"
+                        class="w-2 h-2 rounded-full"></span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 capitalize" x-text="c.sentiment || 'neutral'"></span>
+                </div>
+                <!-- Confidence badge -->
+                <span :class="c.ai_confidence >= 0.80 ? 'conf-high' : c.ai_confidence >= 0.65 ? 'conf-medium' : 'conf-low'"
+                      class="text-xs font-mono font-semibold"
+                      x-text="c.ai_confidence ? (c.ai_confidence * 100).toFixed(0) + '%' : '-'"></span>
+                <!-- Intent tag -->
+                <template x-if="c.detected_intents && c.detected_intents.length > 0">
+                  <span class="badge-navy text-xs" x-text="c.detected_intents[0]"></span>
+                </template>
+              </div>
+              <!-- Accept button for waiting cases -->
+              <button @click.stop="acceptCase(c)"
+                      class="btn-primary w-full justify-center text-xs py-1.5 mt-2">
+                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                Accept Case
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Active tab -->
+      <template x-if="queueTab === 'active'">
+        <div>
+          <template x-if="activeCases.length === 0">
+            <div class="text-center py-12 px-4">
+              <i data-lucide="users" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+              <p class="text-sm text-gray-500 dark:text-gray-400">No active cases</p>
+            </div>
+          </template>
+          <template x-for="c in activeCases" :key="c.id">
+            <div @click="selectCase(c)"
+                 :class="selectedCase?.id === c.id ? 'border-brand-orange bg-brand-orange/5' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'"
+                 class="mx-3 my-1 border rounded-xl p-3 cursor-pointer transition-all">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="min-w-0">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white truncate" x-text="c.customer_name || 'Customer'"></p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" x-text="c.customer_goal || c.handover_reason"></p>
+                </div>
+                <span class="badge-green text-xs shrink-0">Active</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span :class="c.sentiment === 'negative' ? 'bg-red-500' : c.sentiment === 'positive' ? 'bg-green-500' : 'bg-gray-400'"
+                      class="w-2 h-2 rounded-full"></span>
+                <span :class="c.ai_confidence >= 0.80 ? 'conf-high' : c.ai_confidence >= 0.65 ? 'conf-medium' : 'conf-low'"
+                      class="text-xs font-mono font-semibold" x-text="c.ai_confidence ? (c.ai_confidence * 100).toFixed(0) + '%' : '-'"></span>
+                <template x-if="c.detected_intents?.length > 0">
+                  <span class="badge-navy text-xs" x-text="c.detected_intents[0]"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Resolved tab -->
+      <template x-if="queueTab === 'resolved'">
+        <div>
+          <template x-for="c in resolvedCases" :key="c.id">
+            <div @click="selectCase(c)"
+                 :class="selectedCase?.id === c.id ? 'border-brand-orange bg-brand-orange/5' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'"
+                 class="mx-3 my-1 border rounded-xl p-3 cursor-pointer transition-all">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white truncate" x-text="c.customer_name || 'Customer'"></p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate" x-text="c.customer_goal"></p>
+                </div>
+                <span class="badge-gray text-xs shrink-0">Resolved</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </aside>
+
+  <!-- ══ COLUMN 2: CHAT WORKSPACE ════════════════════════════════════════ -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- No case selected state -->
+    <template x-if="!selectedCase">
+      <div class="flex-1 flex items-center justify-center">
+        <div class="text-center">
+          <div class="w-20 h-20 rounded-2xl bg-brand-orange/10 flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="inbox" class="w-10 h-10 text-brand-orange"></i>
+          </div>
+          <h2 class="font-display font-bold text-xl text-gray-900 dark:text-white mb-2">Select a Case</h2>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Choose a case from the queue to start helping.</p>
+        </div>
+      </div>
+    </template>
+
+    <!-- Active case workspace -->
+    <template x-if="selectedCase">
+      <div class="flex-1 flex flex-col min-h-0">
+        <!-- Case header -->
+        <div class="flex items-center justify-between px-6 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-brand-navy flex items-center justify-center text-white text-sm font-bold"
+                 x-text="(selectedCase.customer_name || 'C')[0].toUpperCase()"></div>
+            <div>
+              <h2 class="font-semibold text-gray-900 dark:text-white text-sm" x-text="selectedCase.customer_name || 'Customer'"></h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400" x-text="'Case #' + selectedCase.id + ' · ' + (selectedCase.session_state || selectedCase.state || 'Active')"></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="returnToAI()" title="Return to AI" class="btn-ghost text-xs py-1.5 px-3 border border-gray-200 dark:border-gray-700">
+              <i data-lucide="bot" class="w-3.5 h-3.5"></i> Return to AI
+            </button>
+            <button @click="resolveCase()" class="btn-primary text-xs py-1.5 px-4">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Resolve
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="staff-chat-messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-3 scrollbar-thin">
+          <template x-if="caseLoading">
+            <div class="space-y-4">
+              <template x-for="i in 5">
+                <div :class="i % 2 === 0 ? 'flex justify-end' : 'flex justify-start'">
+                  <div class="skeleton h-12 rounded-2xl" :class="i % 2 === 0 ? 'w-48' : 'w-56'"></div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-for="msg in caseMessages" :key="msg.id">
+            <div>
+              <!-- System -->
+              <template x-if="msg.sender === 'system'">
+                <div class="msg-system flex items-center gap-2">
+                  <div class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                  <span x-text="msg.content"></span>
+                  <div class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                </div>
+              </template>
+              <!-- Internal note -->
+              <template x-if="msg.is_internal_note">
+                <div class="flex justify-center">
+                  <div class="max-w-sm px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-400">
+                    <span class="font-semibold">Note: </span><span x-text="msg.content"></span>
+                  </div>
+                </div>
+              </template>
+              <!-- Customer -->
+              <template x-if="msg.sender === 'customer' && !msg.is_internal_note">
+                <div class="flex justify-end">
+                  <div class="msg-customer" x-text="msg.content"></div>
+                </div>
+              </template>
+              <!-- AI -->
+              <template x-if="msg.sender === 'ai' && !msg.is_internal_note">
+                <div class="flex justify-start items-end gap-2">
+                  <div class="w-6 h-6 rounded-full bg-brand-orange flex items-center justify-center text-white text-xs font-bold shrink-0">AI</div>
+                  <div class="msg-ai" x-text="msg.content"></div>
+                </div>
+              </template>
+              <!-- Staff -->
+              <template x-if="msg.sender === 'staff' && !msg.is_internal_note">
+                <div class="flex justify-start items-end gap-2">
+                  <div class="w-6 h-6 rounded-full bg-brand-navy flex items-center justify-center text-white text-xs shrink-0">
+                    <i data-lucide="user" class="w-3 h-3"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400 mb-0.5" x-text="msg.sender_name || 'Agent'"></p>
+                    <div class="msg-staff" x-text="msg.content"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <!-- Note / Reply toggle -->
+        <div class="px-6 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+          <div class="flex gap-1 mb-2">
+            <button @click="replyMode='reply'"
+                    :class="replyMode==='reply' ? 'bg-brand-orange/10 text-brand-orange' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i> Reply
+            </button>
+            <button @click="replyMode='note'"
+                    :class="replyMode==='note' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+              <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Internal Note
+            </button>
+          </div>
+          <form @submit.prevent="sendReply()" class="flex gap-2 pb-4">
+            <textarea x-model="replyText" @keydown.enter.prevent="if(!$event.shiftKey) sendReply()"
+                      :placeholder="replyMode === 'note' ? 'Add internal note (not visible to customer)...' : 'Type a reply...'"
+                      rows="2"
+                      :class="replyMode === 'note' ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20' : ''"
+                      class="input resize-none text-sm flex-1 scrollbar-thin"></textarea>
+            <button type="submit" :disabled="!replyText.trim()"
+                    class="w-10 h-10 self-end rounded-xl bg-brand-orange text-white flex items-center justify-center hover:bg-brand-orange-dark active:scale-95 transition-all disabled:opacity-40">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ══ COLUMN 3: HANDOVER DETAILS PANEL ═══════════════════════════════ -->
+  <aside class="w-80 shrink-0 border-l border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-950 overflow-y-auto scrollbar-thin">
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+      <h2 class="font-display font-bold text-gray-900 dark:text-white text-sm">Handover Package</h2>
+    </div>
+
+    <template x-if="!selectedCase">
+      <div class="flex-1 flex items-center justify-center p-6">
+        <p class="text-sm text-gray-400 text-center">Select a case to view the AI handover package.</p>
+      </div>
+    </template>
+
+    <template x-if="selectedCase">
+      <div class="divide-y divide-gray-100 dark:divide-gray-800">
+
+        <!-- Customer info -->
+        <div class="p-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Customer</p>
+          <p class="font-semibold text-gray-900 dark:text-white text-sm" x-text="selectedCase.customer_name || 'Unknown'"></p>
+          <p class="text-xs text-gray-500 dark:text-gray-400" x-text="selectedCase.customer_email || ''"></p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Priority:
+            <span :class="selectedCase.priority === 'high' ? 'text-red-500' : selectedCase.priority === 'medium' ? 'text-amber-500' : 'text-gray-500'"
+                  class="font-semibold capitalize" x-text="selectedCase.priority || 'normal'"></span>
+          </p>
+        </div>
+
+        <!-- AI Confidence -->
+        <div class="p-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">AI Confidence</p>
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
+              <div :style="'width: ' + (selectedCase.ai_confidence * 100) + '%'"
+                   :class="selectedCase.ai_confidence >= 0.80 ? 'bg-green-500' : selectedCase.ai_confidence >= 0.65 ? 'bg-amber-500' : 'bg-red-500'"
+                   class="h-2 rounded-full transition-all duration-500"></div>
+            </div>
+            <span :class="selectedCase.ai_confidence >= 0.80 ? 'conf-high' : selectedCase.ai_confidence >= 0.65 ? 'conf-medium' : 'conf-low'"
+                  class="font-mono font-bold text-sm"
+                  x-text="selectedCase.ai_confidence ? (selectedCase.ai_confidence * 100).toFixed(0) + '%' : '-'"></span>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+             x-text="selectedCase.ai_confidence >= 0.80 ? 'HIGH — AI had good coverage' : selectedCase.ai_confidence >= 0.65 ? 'MEDIUM — Partial coverage' : 'LOW — AI struggled to answer'"></p>
+        </div>
+
+        <!-- AI Summary (accordion) -->
+        <div x-data="{open: true}" class="p-4">
+          <button @click="open = !open" class="flex items-center justify-between w-full text-left">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">AI Summary</p>
+            <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+          </button>
+          <div x-show="open" x-collapse class="mt-2">
+            <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed"
+               x-text="selectedCase.ai_summary || 'No summary available.'"></p>
+          </div>
+        </div>
+
+        <!-- Customer Goal -->
+        <div class="p-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Customer Goal</p>
+          <p class="text-sm text-gray-700 dark:text-gray-300" x-text="selectedCase.customer_goal || '—'"></p>
+        </div>
+
+        <!-- Handover Reason -->
+        <div class="p-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Handover Reason</p>
+          <span class="badge-orange text-xs" x-text="(selectedCase.handover_reason || '—').replace('_', ' ').toUpperCase()"></span>
+        </div>
+
+        <!-- Detected Intents (accordion) -->
+        <div x-data="{open: true}" class="p-4">
+          <button @click="open = !open" class="flex items-center justify-between w-full text-left">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Detected Intents</p>
+            <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+          </button>
+          <div x-show="open" x-collapse class="mt-2">
+            <template x-if="!selectedCase.detected_intents || selectedCase.detected_intents.length === 0">
+              <p class="text-xs text-gray-400">None detected</p>
+            </template>
+            <div class="flex flex-wrap gap-1.5">
+              <template x-for="intent in (selectedCase.detected_intents || [])">
+                <span class="badge-navy text-xs" x-text="intent"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entities (accordion) -->
+        <div x-data="{open: false}" class="p-4">
+          <button @click="open = !open" class="flex items-center justify-between w-full text-left">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Entities Detected</p>
+            <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+          </button>
+          <div x-show="open" x-collapse class="mt-2 space-y-1">
+            <template x-if="!selectedCase.detected_entities || Object.keys(selectedCase.detected_entities).length === 0">
+              <p class="text-xs text-gray-400">No entities</p>
+            </template>
+            <template x-for="[key, value] in Object.entries(selectedCase.detected_entities || {})">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-500 dark:text-gray-400 capitalize" x-text="key.replace('_', ' ')"></span>
+                <span class="font-medium text-gray-900 dark:text-white" x-text="value"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Tools Used (accordion) -->
+        <div x-data="{open: false}" class="p-4">
+          <button @click="open = !open" class="flex items-center justify-between w-full text-left">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tools Used</p>
+            <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+          </button>
+          <div x-show="open" x-collapse class="mt-2">
+            <template x-if="!selectedCase.tools_used || selectedCase.tools_used.length === 0">
+              <p class="text-xs text-gray-400">No tools called</p>
+            </template>
+            <div class="space-y-1">
+              <template x-for="tool in (selectedCase.tools_used || [])">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-4 h-4 rounded bg-brand-orange/10 text-brand-orange flex items-center justify-center shrink-0">
+                    <i data-lucide="zap" class="w-2.5 h-2.5"></i>
+                  </span>
+                  <span class="font-mono text-gray-700 dark:text-gray-300" x-text="tool"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- RAG Sources (accordion) -->
+        <div x-data="{open: false}" class="p-4">
+          <button @click="open = !open" class="flex items-center justify-between w-full text-left">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">RAG Sources</p>
+            <i :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-gray-400"></i>
+          </button>
+          <div x-show="open" x-collapse class="mt-2 space-y-1">
+            <template x-if="!selectedCase.rag_sources || selectedCase.rag_sources.length === 0">
+              <p class="text-xs text-gray-400">No knowledge sources retrieved</p>
+            </template>
+            <template x-for="(src, i) in (selectedCase.rag_sources || [])">
+              <div class="text-xs bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                <p class="font-medium text-gray-700 dark:text-gray-300 truncate" x-text="src.document_title || 'Source ' + (i+1)"></p>
+                <p class="text-gray-400 mt-0.5" x-text="'Score: ' + (src.score ? (src.score * 100).toFixed(0) + '%' : '—')"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Suggested Action -->
+        <div class="p-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">AI Suggested Action</p>
+          <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+            <p class="text-sm text-blue-800 dark:text-blue-300" x-text="selectedCase.suggested_action || 'Review customer request and provide resolution.'"></p>
+          </div>
+        </div>
+
+      </div>
+    </template>
+  </aside>
+</div>
+
+<!-- Confirm dialogs (resolve / return to AI) -->
+<div x-data x-show="$store.staffConfirm.show"
+     @click.self="$store.staffConfirm.show = false"
+     class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-panel p-6 w-full max-w-sm">
+    <h3 class="font-display font-bold text-lg text-gray-900 dark:text-white mb-2" x-text="$store.staffConfirm.title"></h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5" x-text="$store.staffConfirm.message"></p>
+    <div class="flex gap-3">
+      <button @click="$store.staffConfirm.confirm()" class="btn-primary flex-1 justify-center" x-text="$store.staffConfirm.confirmLabel"></button>
+      <button @click="$store.staffConfirm.show = false" class="btn-secondary flex-1 justify-center">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Alpine.js store for confirm dialogs
+document.addEventListener('alpine:init', () => {
+  Alpine.store('staffConfirm', {
+    show: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    _resolve: null,
+    prompt(title, message, confirmLabel = 'Confirm') {
+      this.title = title;
+      this.message = message;
+      this.confirmLabel = confirmLabel;
+      this.show = true;
+      return new Promise(resolve => { this._resolve = resolve; });
+    },
+    confirm() {
+      this.show = false;
+      if (this._resolve) this._resolve(true);
+    }
+  });
+});
+
+function staffDashboard() {
+  return {
+    queueTab: 'waiting',
+    waitingCases: [],
+    activeCases: [],
+    resolvedCases: [],
+    selectedCase: null,
+    caseMessages: [],
+    caseLoading: false,
+    queueLoading: true,
+    replyText: '',
+    replyMode: 'reply',
+    wsConnected: false,
+    ws: null,
+    pollTimer: null,
+
+    async init() {
+      await this.loadQueue();
+      this.connectQueueWS();
+    },
+
+    async loadQueue() {
+      this.queueLoading = true;
+      const res = await authManager.apiFetch('/api/staff/queue/?status=all');
+      if (res.ok) {
+        const data = await res.json();
+        this.waitingCases = (data.results || data).filter(c => c.session_state === 'WAITING_FOR_STAFF');
+        this.activeCases  = (data.results || data).filter(c => c.session_state === 'HUMAN_ACTIVE');
+        this.resolvedCases = (data.results || data).filter(c => c.session_state === 'RESOLVED');
+      }
+      this.queueLoading = false;
+    },
+
+    async connectQueueWS(retriedAfterRefresh = false) {
+      const token = authManager.token;
+      const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      this.ws = new WebSocket(`${wsScheme}://${window.location.host}/ws/staff/queue/?token=${token}`);
+      this.ws.onopen = () => {
+        this.wsConnected = true;
+        // A previous failed attempt may have started the poll fallback —
+        // stop it now that the socket is actually working, or it keeps
+        // firing loadQueue() forever alongside live WS updates.
+        if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+      };
+      this.ws.onclose = async (e) => {
+        this.wsConnected = false;
+        // 4001 = our own consumer explicitly rejected auth (see
+        // StaffQueueConsumer.connect) — retrying with the SAME stale token
+        // forever achieves nothing but flooding the server. Refresh once
+        // and retry with the new token; if that still gets rejected, the
+        // session is genuinely dead and further retries are pointless.
+        if (e.code === 4001) {
+          if (retriedAfterRefresh) {
+            this.startPollFallback();
+            return;
+          }
+          const refreshed = await authManager._refreshToken();
+          if (refreshed) {
+            this.connectQueueWS(true);
+          } else {
+            this.startPollFallback();
+          }
+          return;
+        }
+        // Any other close (network blip, server restart) — keep retrying,
+        // this is the transient case the original 3s retry was meant for.
+        setTimeout(() => this.connectQueueWS(), 3000);
+      };
+      this.ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'queue_update') this.loadQueue();
+        if (msg.type === 'new_message' && this.selectedCase?.session_id === msg.session_id) {
+          this.caseMessages.push(msg);
+          this.$nextTick(() => { const el = document.getElementById('staff-chat-messages'); if (el) el.scrollTop = el.scrollHeight; });
+        }
+      };
+      this.ws.onerror = () => {
+        this.wsConnected = false;
+      };
+    },
+
+    startPollFallback() {
+      // Guard against ever having more than one interval running — the
+      // original bug here created a new setInterval on every failed
+      // reconnect attempt without clearing the last one, so a sustained
+      // outage would stack dozens of overlapping 5s polls that never got
+      // cleaned up, flooding the queue endpoint.
+      if (this.pollTimer) return;
+      this.pollTimer = setInterval(() => this.loadQueue(), 5000);
+    },
+
+    async selectCase(c) {
+      this.selectedCase = c;
+      this.caseLoading = true;
+      const res = await authManager.apiFetch(`/api/staff/cases/${c.id}/messages/`);
+      if (res.ok) {
+        const data = await res.json();
+        this.caseMessages = data.results || data;
+      }
+      this.caseLoading = false;
+      this.$nextTick(() => {
+        const el = document.getElementById('staff-chat-messages');
+        if (el) el.scrollTop = el.scrollHeight;
+        lucide.createIcons();
+      });
+    },
+
+    async acceptCase(c) {
+      const res = await authManager.apiFetch(`/api/staff/cases/${c.id}/accept/`, { method: 'POST' });
+      if (res.ok) {
+        await this.loadQueue();
+        await this.selectCase(c);
+        this.queueTab = 'active';
+        showToast('Case accepted! You are now connected to the customer.', 'success');
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Could not accept case.', 'error');
+      }
+    },
+
+    async sendReply() {
+      if (!this.replyText.trim() || !this.selectedCase) return;
+      const isNote = this.replyMode === 'note';
+      const body = { content: this.replyText, is_internal_note: isNote };
+      const res = await authManager.apiFetch(`/api/staff/cases/${this.selectedCase.id}/messages/`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const msg = await res.json();
+        this.caseMessages.push(msg);
+        this.replyText = '';
+        this.$nextTick(() => {
+          const el = document.getElementById('staff-chat-messages');
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      }
+    },
+
+    async resolveCase() {
+      const ok = await Alpine.store('staffConfirm').prompt(
+        'Resolve Case',
+        `Mark case #${this.selectedCase.id} as resolved? This will end the session and notify the customer.`,
+        'Resolve'
+      );
+      if (!ok) return;
+      const res = await authManager.apiFetch(`/api/staff/cases/${this.selectedCase.id}/resolve/`, { method: 'POST' });
+      if (res.ok) {
+        showToast('Case resolved successfully.', 'success');
+        this.selectedCase = null;
+        this.caseMessages = [];
+        await this.loadQueue();
+      }
+    },
+
+    async returnToAI() {
+      const ok = await Alpine.store('staffConfirm').prompt(
+        'Return to AI',
+        'Return this conversation to the AI assistant? The customer will be notified.',
+        'Return to AI'
+      );
+      if (!ok) return;
+      const res = await authManager.apiFetch(`/api/staff/cases/${this.selectedCase.id}/return-to-ai/`, { method: 'POST' });
+      if (res.ok) {
+        showToast('Case returned to AI.', 'info');
+        this.selectedCase = null;
+        this.caseMessages = [];
+        await this.loadQueue();
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

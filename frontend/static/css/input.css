@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --color-orange: #FF6B35;
+    --color-navy: #1A2B4A;
+    --color-gold: #FFD700;
+  }
+  * { @apply border-gray-200 dark:border-gray-700; }
+  body { @apply font-sans bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300; }
+  h1,h2,h3 { @apply font-display; }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-orange text-white font-semibold text-sm
+           hover:bg-brand-orange-dark active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-brand-navy text-brand-navy font-semibold text-sm
+           hover:bg-brand-navy hover:text-white active:scale-95 transition-all duration-200
+           dark:border-gray-400 dark:text-gray-200 dark:hover:bg-gray-700;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 font-medium text-sm
+           hover:bg-gray-100 active:scale-95 transition-all duration-150
+           dark:text-gray-300 dark:hover:bg-gray-800;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white font-medium text-sm
+           hover:bg-red-600 active:scale-95 transition-all duration-150;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-2xl shadow-card border border-gray-100 dark:border-gray-800
+           hover:shadow-card-hover transition-shadow duration-300;
+  }
+  .card-flat {
+    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800;
+  }
+
+  /* Product card */
+  .product-card {
+    @apply card overflow-hidden cursor-pointer;
+  }
+  .product-card img {
+    @apply w-full h-56 object-cover transition-transform duration-500;
+  }
+  .product-card:hover img {
+    @apply scale-105;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-orange { @apply badge bg-brand-orange/10 text-brand-orange; }
+  .badge-navy  { @apply badge bg-brand-navy/10 text-brand-navy dark:bg-brand-navy/30 dark:text-blue-300; }
+  .badge-green { @apply badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400; }
+  .badge-red   { @apply badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400; }
+  .badge-amber { @apply badge bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400; }
+  .badge-gray  { @apply badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400; }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply rounded-lg bg-gray-200 dark:bg-gray-800 animate-shimmer bg-[length:200%_100%];
+    background-image: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  }
+  .dark .skeleton {
+    background-image: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-orange/40 focus:border-brand-orange
+           dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 transition-all duration-200;
+  }
+
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+           text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
+           hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-150 cursor-pointer;
+  }
+  .nav-item.active {
+    @apply bg-brand-orange/10 text-brand-orange dark:bg-brand-orange/20;
+  }
+
+  /* Confidence band colours */
+  .conf-high   { @apply text-green-600 dark:text-green-400; }
+  .conf-medium { @apply text-amber-500 dark:text-amber-400; }
+  .conf-low    { @apply text-red-500 dark:text-red-400; }
+
+  /* Chat message bubbles */
+  .msg-customer {
+    @apply max-w-xs lg:max-w-sm ml-auto px-4 py-3 rounded-2xl rounded-br-sm
+           bg-brand-orange text-white text-sm leading-relaxed shadow-sm;
+  }
+  .msg-ai {
+    @apply max-w-xs lg:max-w-sm mr-auto px-4 py-3 rounded-2xl rounded-bl-sm
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm leading-relaxed shadow-sm border border-gray-100 dark:border-gray-700;
+  }
+  .msg-staff {
+    @apply max-w-xs lg:max-w-sm mr-auto px-4 py-3 rounded-2xl rounded-bl-sm
+           bg-brand-navy text-white text-sm leading-relaxed shadow-sm;
+  }
+  .msg-system {
+    @apply w-full text-center text-xs text-gray-400 dark:text-gray-500 py-2;
+  }
+
+  /* Scroll-reveal class — starts hidden, JS adds 'visible' */
+  .reveal {
+    @apply opacity-0 translate-y-6 transition-all duration-700 ease-out;
+  }
+  .reveal.visible {
+    @apply opacity-100 translate-y-0;
+  }
+  .reveal-delay-1 { transition-delay: 100ms; }
+  .reveal-delay-2 { transition-delay: 200ms; }
+  .reveal-delay-3 { transition-delay: 300ms; }
+  .reveal-delay-4 { transition-delay: 400ms; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.300') transparent;
+  }
+  .dark .scrollbar-thin { scrollbar-color: theme('colors.gray.700') transparent; }
+}
+
+/* HTMX loading indicator — hidden by default, shown only while request is in-flight */
+.htmx-indicator { display: none !important; }
+.htmx-request .htmx-indicator { display: flex !important; }
+.htmx-request.htmx-indicator { display: flex !important; }
+
+/* Robot chat icon — mouth swaps from neutral to smile on bubble hover */
+.chat-robot-mouth-smile { opacity: 0; transition: opacity 0.15s ease; }
+.chat-robot-mouth-neutral { opacity: 1; transition: opacity 0.15s ease; }
+.group:hover .chat-robot-mouth-smile { opacity: 1; }
+.group:hover .chat-robot-mouth-neutral { opacity: 0; }
+
+/* Chat bubble head-shake animation — shakes every 4 seconds to grab attention */
+@keyframes chat-headshake {
+  0%, 50%, 100% { transform: rotate(0deg) scale(1); }
+  8%  { transform: rotate(-15deg) scale(1.08); }
+  16% { transform: rotate(13deg)  scale(1.1);  }
+  24% { transform: rotate(-10deg) scale(1.06); }
+  32% { transform: rotate(8deg)   scale(1.04); }
+  40% { transform: rotate(-3deg)  scale(1.01); }
+  45% { transform: rotate(0deg)   scale(1);    }
+}
+.chat-bubble-animate {
+  animation: chat-headshake 4s cubic-bezier(0.36, 0.07, 0.19, 0.97) 2s infinite;
+  transform-origin: bottom center;
+}

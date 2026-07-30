@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Products — JumpStart{% endblock %}
+
+{% block content %}
+<div x-data="productsPage()" class="min-h-screen bg-gray-50 dark:bg-gray-900">
+
+  <!-- Page Header -->
+  <div class="bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white">All Products</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"
+             x-text="totalCount ? totalCount + ' products found' : 'Browse our collection'"></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Mobile filter toggle -->
+          <button @click="showFilters = !showFilters"
+                  class="btn-ghost lg:hidden flex items-center gap-2 border border-gray-200 dark:border-gray-700">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+            Filters
+            <span x-show="activeFiltersCount > 0"
+                  class="badge-orange text-xs ml-0.5" x-text="activeFiltersCount"></span>
+          </button>
+          <!-- Sort -->
+          <select x-model="sortBy" @change="applyFilters()"
+                  class="input w-auto py-2 text-sm">
+            <option value="">Sort: Featured</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="rating">Top Rated</option>
+            <option value="-created_at">Newest</option>
+          </select>
+          <!-- View toggle -->
+          <div class="flex rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <button @click="viewMode='grid'" :class="viewMode==='grid' ? 'bg-brand-orange text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                    class="p-2 transition-colors">
+              <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+            </button>
+            <button @click="viewMode='list'" :class="viewMode==='list' ? 'bg-brand-orange text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                    class="p-2 transition-colors">
+              <i data-lucide="list" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active filters row -->
+      <div class="flex flex-wrap gap-2 mt-3" x-show="activeFiltersCount > 0">
+        <template x-if="activeCategory">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange/10 text-brand-orange text-xs font-medium">
+            <span x-text="activeCategory"></span>
+            <button @click="activeCategory=''; applyFilters()"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        </template>
+        <template x-if="searchQuery">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange/10 text-brand-orange text-xs font-medium">
+            "<span x-text="searchQuery"></span>"
+            <button @click="searchQuery=''; applyFilters()"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        </template>
+        <template x-if="priceMin || priceMax">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange/10 text-brand-orange text-xs font-medium">
+            $<span x-text="priceMin||0"></span> – $<span x-text="priceMax||'∞'"></span>
+            <button @click="priceMin=''; priceMax=''; applyFilters()"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        </template>
+        <button @click="clearFilters()" class="text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 underline ml-1">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
+
+    <!-- ── FILTER SIDEBAR ──────────────────────────────────────────────────── -->
+    <aside class="w-64 shrink-0"
+           :class="showFilters ? 'block' : 'hidden lg:block'">
+      <!-- Mobile: slide-down overlay -->
+      <div class="lg:sticky lg:top-24">
+        <div class="card p-5 space-y-6">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Filters</h2>
+            <button @click="clearFilters()" class="text-xs text-brand-orange hover:underline" x-show="activeFiltersCount>0">Reset</button>
+          </div>
+
+          <!-- Categories -->
+          <div>
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Category</h3>
+            <div class="space-y-1" id="filter-categories"
+                 hx-get="/partials/categories/filters/"
+                 hx-trigger="load"
+                 hx-target="#filter-categories"
+                 hx-swap="innerHTML">
+              {% for i in "12345" %}
+              <div class="skeleton h-8 rounded-lg w-full"></div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Price Range -->
+          <div>
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Price Range</h3>
+            <div class="space-y-3">
+              <div class="flex gap-2">
+                <div class="flex-1">
+                  <label class="text-xs text-gray-500 mb-1 block">Min ($)</label>
+                  <input type="number" x-model="priceMin" @change="applyFilters()" placeholder="0"
+                         class="input py-2 text-sm" min="0">
+                </div>
+                <div class="flex-1">
+                  <label class="text-xs text-gray-500 mb-1 block">Max ($)</label>
+                  <input type="number" x-model="priceMax" @change="applyFilters()" placeholder="Any"
+                         class="input py-2 text-sm" min="0">
+                </div>
+              </div>
+              <!-- Quick price filters -->
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="range in priceRanges">
+                  <button @click="setPriceRange(range.min, range.max)"
+                          :class="priceMin==range.min && priceMax==range.max ? 'bg-brand-orange text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'"
+                          class="text-xs px-2.5 py-1 rounded-lg hover:bg-brand-orange hover:text-white transition-colors"
+                          x-text="range.label"></button>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rating -->
+          <div>
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Min Rating</h3>
+            <div class="space-y-1">
+              <template x-for="r in [4,3,2,1]">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="radio" :value="r" x-model="minRating" @change="applyFilters()"
+                         class="accent-brand-orange w-4 h-4">
+                  <span class="flex items-center gap-0.5 text-sm text-gray-700 dark:text-gray-300">
+                    <template x-for="i in r">
+                      <i data-lucide="star" class="w-3.5 h-3.5 text-brand-gold fill-brand-gold"></i>
+                    </template>
+                    <span class="ml-1">&amp; up</span>
+                  </span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <!-- In Stock -->
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="inStockOnly" @change="applyFilters()"
+                     class="accent-brand-orange w-4 h-4 rounded">
+              <span class="text-sm text-gray-700 dark:text-gray-300">In Stock Only</span>
+            </label>
+          </div>
+
+          <!-- Featured Only -->
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="featuredOnly" @change="applyFilters()"
+                     class="accent-brand-orange w-4 h-4 rounded">
+              <span class="text-sm text-gray-700 dark:text-gray-300">Featured Only</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── PRODUCT GRID ────────────────────────────────────────────────────── -->
+    <div class="flex-1 min-w-0">
+      <!-- HTMX target for product grid -->
+      <div id="products-grid"
+           :class="viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6'"
+           hx-get="/partials/products/"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           hx-indicator="#products-loading">
+        <!-- Skeleton loading -->
+        {% for i in "123456" %}
+        <div class="product-card">
+          <div class="skeleton h-56 w-full rounded-t-2xl rounded-b-none"></div>
+          <div class="p-4 space-y-3">
+            <div class="skeleton h-4 w-3/4 rounded"></div>
+            <div class="skeleton h-3 w-1/2 rounded"></div>
+            <div class="skeleton h-5 w-1/3 rounded"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Loading spinner for HTMX requests -->
+      <div id="products-loading" class="htmx-indicator flex justify-center py-8">
+        <div class="flex items-center gap-3 text-gray-400">
+          <svg class="animate-spin w-5 h-5 text-brand-orange" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          Loading products...
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-center gap-3 mt-10" x-show="totalPages > 1">
+        <button @click="page--; applyFilters()" :disabled="page <= 1"
+                class="btn-ghost border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        <div class="flex items-center gap-1">
+          <template x-for="p in visiblePages()">
+            <button @click="page = p; applyFilters()"
+                    :class="p === page ? 'bg-brand-orange text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="w-9 h-9 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 transition-colors"
+                    x-text="p"></button>
+          </template>
+        </div>
+        <button @click="page++; applyFilters()" :disabled="page >= totalPages"
+                class="btn-ghost border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function productsPage() {
+  return {
+    viewMode: 'grid',
+    showFilters: false,
+    searchQuery: new URLSearchParams(location.search).get('q') || '',
+    activeCategory: new URLSearchParams(location.search).get('category') || '',
+    priceMin: '',
+    priceMax: '',
+    minRating: '',
+    inStockOnly: false,
+    featuredOnly: false,
+    sortBy: '',
+    page: 1,
+    pageSize: 12,
+    totalCount: 0,
+    totalPages: 1,
+    priceRanges: [
+      { label: 'Under $50', min: 0, max: 50 },
+      { label: '$50–100', min: 50, max: 100 },
+      { label: '$100–250', min: 100, max: 250 },
+      { label: 'Over $250', min: 250, max: '' },
+    ],
+
+    get activeFiltersCount() {
+      return [this.activeCategory, this.searchQuery, this.priceMin || this.priceMax, this.minRating, this.inStockOnly, this.featuredOnly].filter(Boolean).length;
+    },
+
+    applyFilters() {
+      const params = new URLSearchParams();
+      if (this.activeCategory) params.set('category', this.activeCategory);
+      if (this.searchQuery)    params.set('q', this.searchQuery);
+      if (this.priceMin)       params.set('min_price', this.priceMin);
+      if (this.priceMax)       params.set('max_price', this.priceMax);
+      if (this.sortBy)         params.set('ordering', this.sortBy);
+      if (this.featuredOnly)   params.set('featured', 'true');
+      if (this.minRating)      params.set('min_rating', this.minRating);
+      if (this.inStockOnly)    params.set('in_stock', 'true');
+      params.set('limit', this.pageSize);
+      params.set('offset', (this.page - 1) * this.pageSize);
+      const url = `/partials/products/?${params.toString()}`;
+      htmx.ajax('GET', url, { target: '#products-grid', swap: 'innerHTML' });
+    },
+
+    clearFilters() {
+      this.activeCategory = '';
+      this.searchQuery = '';
+      this.priceMin = '';
+      this.priceMax = '';
+      this.minRating = '';
+      this.inStockOnly = false;
+      this.featuredOnly = false;
+      this.sortBy = '';
+      this.page = 1;
+      this.applyFilters();
+    },
+
+    selectCategory(cat) {
+      this.activeCategory = this.activeCategory === cat ? '' : cat;
+      this.page = 1;
+      this.applyFilters();
+    },
+
+    setPriceRange(min, max) {
+      if (this.priceMin == min && this.priceMax == max) {
+        this.priceMin = ''; this.priceMax = '';
+      } else {
+        this.priceMin = min; this.priceMax = max;
+      }
+      this.applyFilters();
+    },
+
+    visiblePages() {
+      const pages = [];
+      for (let i = Math.max(1, this.page - 2); i <= Math.min(this.totalPages, this.page + 2); i++) {
+        pages.push(i);
+      }
+      return pages;
+    },
+  };
+}
+
+// Listen for category filter events from sidebar HTMX
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target.id === 'filter-categories') {
+    lucide.createIcons();
+  }
+  if (e.detail.target.id === 'products-grid' || e.detail.target.id === 'trending-products') {
+    lucide.createIcons();
+  }
+});
+</script>
+{% endblock %}

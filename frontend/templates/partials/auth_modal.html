@@ -1,0 +1,168 @@
+<!-- Auth Modal — Login / Register -->
+<div x-data="authModal()" @open-auth.window="open($event.detail.tab)" @keydown.escape.window="close()">
+  <!-- Overlay -->
+  <div x-show="isOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+       @click.self="close()" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+
+    <!-- Modal card -->
+    <div x-show="isOpen" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+         class="bg-white dark:bg-gray-900 rounded-2xl shadow-panel w-full max-w-md">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-6 h-6 rounded bg-brand-orange flex items-center justify-center">
+              <span class="text-white font-bold text-xs">JS</span>
+            </div>
+            <span class="font-display font-bold text-brand-navy dark:text-white">JumpStart</span>
+          </div>
+          <h2 class="font-display font-bold text-xl text-gray-900 dark:text-white"
+              x-text="activeTab === 'login' ? 'Welcome back' : 'Create your account'"></h2>
+        </div>
+        <button @click="close()" class="btn-ghost p-2 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-100 dark:border-gray-800">
+        <button @click="activeTab='login'"
+                :class="activeTab==='login' ? 'border-b-2 border-brand-orange text-brand-orange' : 'text-gray-500 dark:text-gray-400'"
+                class="flex-1 py-3 text-sm font-semibold transition-colors">Sign In</button>
+        <button @click="activeTab='register'"
+                :class="activeTab==='register' ? 'border-b-2 border-brand-orange text-brand-orange' : 'text-gray-500 dark:text-gray-400'"
+                class="flex-1 py-3 text-sm font-semibold transition-colors">Create Account</button>
+      </div>
+
+      <div class="p-6">
+        <!-- Error alert -->
+        <div x-show="error" x-text="error" class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm border border-red-200 dark:border-red-800"></div>
+
+        <!-- ── LOGIN FORM ── -->
+        <form x-show="activeTab === 'login'" @submit.prevent="login()" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+            <input x-model="loginForm.username" type="text" class="input" placeholder="Enter your username" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+            <div class="relative">
+              <input x-model="loginForm.password" :type="showPwd ? 'text' : 'password'" class="input pr-10" placeholder="Enter your password" required />
+              <button type="button" @click="showPwd = !showPwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <i :data-lucide="showPwd ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" :disabled="loading" class="btn-primary w-full justify-center py-3 text-base">
+            <span x-show="!loading">Sign In</span>
+            <span x-show="loading" class="flex items-center gap-2">
+              <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Signing in...
+            </span>
+          </button>
+          <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+            Don't have an account?
+            <button type="button" @click="activeTab='register'" class="text-brand-orange font-medium hover:underline">Sign up</button>
+          </p>
+        </form>
+
+        <!-- ── REGISTER FORM ── -->
+        <form x-show="activeTab === 'register'" @submit.prevent="register()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">First name</label>
+              <input x-model="regForm.first_name" type="text" class="input" placeholder="First" required />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Last name</label>
+              <input x-model="regForm.last_name" type="text" class="input" placeholder="Last" required />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+            <input x-model="regForm.username" type="text" class="input" placeholder="Choose a username" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+            <input x-model="regForm.email" type="email" class="input" placeholder="your@email.com" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+            <div class="relative">
+              <input x-model="regForm.password" :type="showPwd ? 'text' : 'password'" class="input pr-10" placeholder="At least 8 characters" required minlength="8" />
+              <button type="button" @click="showPwd = !showPwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <i :data-lucide="showPwd ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm password</label>
+            <input x-model="regForm.password2" :type="showPwd ? 'text' : 'password'" class="input" placeholder="Repeat password" required minlength="8" />
+          </div>
+          <button type="submit" :disabled="loading" class="btn-primary w-full justify-center py-3 text-base">
+            <span x-show="!loading">Create Account</span>
+            <span x-show="loading" class="flex items-center gap-2">
+              <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Creating account...
+            </span>
+          </button>
+          <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+            Already have an account?
+            <button type="button" @click="activeTab='login'" class="text-brand-orange font-medium hover:underline">Sign in</button>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function authModal() {
+  return {
+    isOpen: {% if open_login %}true{% else %}false{% endif %},
+    activeTab: 'login',
+    loading: false,
+    error: '',
+    showPwd: false,
+    loginForm: { username: '', password: '' },
+    regForm: { first_name: '', last_name: '', username: '', email: '', password: '', password2: '' },
+
+    open(tab = 'login') { this.activeTab = tab; this.isOpen = true; this.error = ''; },
+    close() { this.isOpen = false; },
+
+    async login() {
+      this.loading = true; this.error = '';
+      const res = await authManager.login(this.loginForm.username, this.loginForm.password);
+      if (!res.ok) {
+        this.error = res.data?.detail || res.data?.non_field_errors?.[0] || 'Invalid credentials.';
+      }
+      this.loading = false;
+    },
+
+    async register() {
+      this.loading = true; this.error = '';
+      if (this.regForm.password !== this.regForm.password2) {
+        this.error = 'Passwords do not match.'; this.loading = false; return;
+      }
+      const res = await authManager.register(this.regForm);
+      if (!res.ok) {
+        const errs = Object.values(res.data).flat();
+        this.error = errs[0] || 'Registration failed.';
+      }
+      this.loading = false;
+    },
+  };
+}
+</script>

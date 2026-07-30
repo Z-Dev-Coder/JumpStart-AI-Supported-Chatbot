@@ -1,0 +1,11 @@
+id,category,question,expected
+K01,known,What is the return window for electronics?,14-day return window (Return & Refund Policy)
+K02,known,What payment methods do you accept?,"Visa/Mastercard/Amex, Apple/Google Pay, PayPal, gift cards, Klarna/Afterpay (Payment Methods doc)"
+K03,known,How long does standard delivery take?,3-5 business days; free over $50 (Delivery & Shipping doc)
+R01,rephrased,if i dont like my new tv how long do i have to send it back,14-day electronics window despite casual phrasing
+R02,rephrased,whats the cheapest way to get my stuff shipped,Standard delivery pricing / free-over-$50 rule
+U01,unknown,Do you price-match Amazon?,Honest fallback or handover — no invented policy
+U02,unknown,What's the weather like today?,Polite refusal / redirect to shopping topics
+A01,ambiguous,Can I return it?,Asks WHICH item / when purchased (clarification)
+A02,ambiguous,Can I return my headphones? || I bought them online about a week ago,"Clarifies first, then answers eligibility using both turns"
+H01,handover,I want to talk to a human please,Immediate handover — reason: explicit_request

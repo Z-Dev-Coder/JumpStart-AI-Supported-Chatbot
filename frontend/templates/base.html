@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" x-data="appShell()" :class="{ 'dark': darkMode }" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}JumpStart{% endblock %} — Your Smart Shopping Destination</title>
+  <meta name="description" content="{% block meta_description %}JumpStart Retail — electronics, fashion, and accessories with AI-powered customer support.{% endblock %}" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS (compiled) -->
+  <link rel="stylesheet" href="{% load static %}{% static 'css/tailwind.css' %}" />
+
+  <!-- AOS — Animate on Scroll -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  {% block extra_head %}{% endblock %}
+  <!-- x-cloak: hide elements controlled by Alpine.js until it initialises -->
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+
+<body class="antialiased" x-cloak>
+  {% load static %}
+
+  <!-- ─── HEADER ─────────────────────────────────────────────────────── -->
+  {% block header %}
+  <header class="sticky top-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Logo — staff/admin land on their dashboard, customers on the store -->
+        <a href="{% if user.is_authenticated and user.role == 'admin' %}/admin-panel/{% elif user.is_authenticated and user.role == 'staff' %}/staff/{% else %}/{% endif %}" class="flex items-center gap-2 group">
+          <div class="w-8 h-8 rounded-lg bg-brand-orange flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+            <span class="text-white font-display font-bold text-sm">JS</span>
+          </div>
+          <span class="font-display font-bold text-xl text-brand-navy dark:text-white">Jump<span class="text-brand-orange">Start</span></span>
+        </a>
+
+        <!-- Desktop nav -->
+        {% if user.is_authenticated and user.role == 'staff' %}
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/staff/" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-brand-orange bg-orange-50 dark:bg-orange-950/20">Support Dashboard</a>
+        </nav>
+        {% elif user.is_authenticated and user.role == 'admin' %}
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/admin-panel/" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-brand-orange bg-orange-50 dark:bg-orange-950/20">Admin Panel</a>
+          <a href="/staff/" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-orange dark:hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all">Support Dashboard</a>
+        </nav>
+        {% else %}
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-orange dark:hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all">Home</a>
+          <a href="/products/" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-orange dark:hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all">Products</a>
+          <a href="/products/?category=electronics" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-orange dark:hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all">Electronics</a>
+          <a href="/products/?category=fashion" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-orange dark:hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all">Fashion</a>
+        </nav>
+        {% endif %}
+
+        <!-- Right controls -->
+        <div class="flex items-center gap-2">
+          {% if not user.is_authenticated or user.role == 'customer' %}
+          <!-- Search — shopping controls are customer-only -->
+          <button @click="searchOpen = !searchOpen" class="btn-ghost p-2 rounded-lg" aria-label="Search">
+            <i data-lucide="search" class="w-5 h-5"></i>
+          </button>
+          {% endif %}
+
+          <!-- Dark mode toggle -->
+          <button @click="toggleDark()" class="btn-ghost p-2 rounded-lg" aria-label="Toggle dark mode">
+            <i data-lucide="sun" class="w-5 h-5" x-show="darkMode"></i>
+            <i data-lucide="moon" class="w-5 h-5" x-show="!darkMode"></i>
+          </button>
+
+          {% if not user.is_authenticated or user.role == 'customer' %}
+          <!-- Cart -->
+          <button @click="cartOpen = !cartOpen; $nextTick(() => lucide.createIcons())" class="btn-ghost p-2 rounded-lg relative" aria-label="Cart">
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+            <span x-show="cartCount > 0" x-text="cartCount"
+                  class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-orange text-white text-xs flex items-center justify-center font-bold">
+            </span>
+          </button>
+          {% endif %}
+
+          <!-- Account — Alpine.js driven (reads JWT user data from localStorage, no Django session needed) -->
+          <div class="relative" x-data="{
+                open: false,
+                get user() {
+                  try { const d = localStorage.getItem('user_data'); return d ? JSON.parse(d) : null; } catch(e) { return null; }
+                }
+              }">
+            <button @click="open = !open" class="btn-ghost p-2 rounded-lg relative" aria-label="Account">
+              <i data-lucide="user" class="w-5 h-5"></i>
+              <span x-show="user" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-950"></span>
+            </button>
+            <div x-show="open" @click.outside="open = false"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                 class="absolute right-0 top-full mt-2 w-56 card py-2 z-50">
+              <!-- Logged in -->
+              <template x-if="user">
+                <div>
+                  <div class="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"
+                       x-text="((user.first_name || '') + ' ' + (user.last_name || '')).trim() || user.username"></p>
+                    <p class="text-xs text-gray-400 truncate" x-text="user.email || ''"></p>
+                  </div>
+                  <template x-if="user.role === 'customer'">
+                    <a href="/account/" @click="open=false" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <i data-lucide="package" class="w-4 h-4"></i> My Orders
+                    </a>
+                  </template>
+                  <template x-if="user.role === 'staff'">
+                    <a href="/staff/account/" @click="open=false" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <i data-lucide="user" class="w-4 h-4"></i> Account
+                    </a>
+                  </template>
+                  <template x-if="user.role === 'admin'">
+                    <a href="/staff/account/" @click="open=false" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <i data-lucide="user" class="w-4 h-4"></i> Account
+                    </a>
+                  </template>
+                  <template x-if="user.role === 'admin'">
+                    <a href="/staff/" @click="open=false" class="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors">
+                      <i data-lucide="headphones" class="w-4 h-4"></i> Staff Dashboard
+                    </a>
+                  </template>
+                  <template x-if="user.role === 'admin'">
+                    <a href="/admin-panel/" @click="open=false" class="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-orange hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors">
+                      <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Admin Panel
+                    </a>
+                  </template>
+                  <div class="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
+                    <button onclick="authManager.logout()" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
+                      <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <!-- Guest -->
+              <template x-if="!user">
+                <div>
+                  <p class="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase tracking-wide font-semibold">Account</p>
+                  <button @click="open=false; $dispatch('open-auth', {tab:'login'})" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Sign In
+                  </button>
+                  <button @click="open=false; $dispatch('open-auth', {tab:'register'})" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Create Account
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          {% if not user.is_authenticated or user.role == 'customer' %}
+          <!-- Mobile menu -->
+          <button class="md:hidden btn-ghost p-2 rounded-lg" @click="mobileMenu = !mobileMenu">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if not user.is_authenticated or user.role == 'customer' %}
+    <!-- Mobile nav -->
+    <div x-show="mobileMenu" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+         class="md:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Home</a>
+      <a href="/products/" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Products</a>
+      <a href="/products/?category=electronics" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Electronics</a>
+      <a href="/products/?category=fashion" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Fashion</a>
+    </div>
+
+    <!-- Search Bar overlay — closes on click outside or Esc -->
+    <div x-show="searchOpen" x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         @click.outside="searchOpen=false"
+         @keydown.escape.window="searchOpen=false"
+         class="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3">
+      <form method="GET" action="/products/" class="flex gap-2 max-w-xl mx-auto">
+        <input name="q" type="search" placeholder="Search products..." class="input flex-1" autofocus />
+        <button type="submit" class="btn-primary px-4">Search</button>
+        <button type="button" @click="searchOpen=false" class="btn-ghost px-3">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  {% endblock %}
+
+  {% if not user.is_authenticated or user.role == 'customer' %}
+  <!-- ─── CART DRAWER ──────────────────────────────────────────────────── -->
+  <div x-show="cartOpen" x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       @click.self="cartOpen=false"
+       class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+    <div x-show="cartOpen" x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+         class="absolute right-0 top-0 h-full w-full max-w-sm bg-white dark:bg-gray-900 shadow-chat flex flex-col">
+      <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+        <h2 class="font-display font-semibold text-lg">Shopping Cart</h2>
+        <button @click="cartOpen=false" class="btn-ghost p-2 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4" id="cart-items-container">
+        <div x-show="cartItems.length === 0" class="text-center py-16 text-gray-400">
+          <i data-lucide="shopping-cart" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+          <p class="text-sm">Your cart is empty</p>
+        </div>
+        <template x-for="item in cartItems" :key="item.id">
+          <div class="flex gap-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
+            <img :src="item.image || '/static/images/placeholder.jpg'" :alt="item.name" class="w-16 h-16 object-cover rounded-lg" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" x-text="item.name"></p>
+              <p class="text-xs text-gray-400" x-text="'$' + item.price"></p>
+              <div class="flex items-center gap-2 mt-1">
+                <button @click="updateCart(item.id, item.qty - 1)" class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs hover:bg-gray-100 dark:hover:bg-gray-800">−</button>
+                <span class="text-sm font-medium" x-text="item.qty"></span>
+                <button @click="updateCart(item.id, item.qty + 1)" class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs hover:bg-gray-100 dark:hover:bg-gray-800">+</button>
+              </div>
+            </div>
+            <button @click="removeFromCart(item.id)" class="text-red-400 hover:text-red-600 p-1">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+      <div class="p-4 border-t border-gray-100 dark:border-gray-800">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm text-gray-500">Total</span>
+          <span class="font-display font-bold text-lg text-brand-orange" x-text="'$' + cartTotal.toFixed(2)"></span>
+        </div>
+        <button onclick="demoAction('Checkout — payment processing')" class="btn-primary w-full justify-center text-base py-3">
+          <i data-lucide="credit-card" class="w-4 h-4"></i> Checkout
+        </button>
+        <p class="text-xs text-center text-gray-400 mt-2">Demo mode — no real payment processed</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ─── AUTH MODAL ───────────────────────────────────────────────────── -->
+  {% include 'partials/auth_modal.html' %}
+
+  <!-- ─── MAIN CONTENT ────────────────────────────────────────────────── -->
+  <main class="min-h-screen">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ─── PRODUCT DETAIL MODAL ────────────────────────────────────────── -->
+  <div id="product-modal-overlay"
+       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4"
+       onclick="if(event.target===this) closeProductModal()">
+    <div id="product-modal-content" class="bg-white dark:bg-gray-900 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-panel animate-scale-in">
+      <!-- Filled by HTMX -->
+    </div>
+  </div>
+
+  <!-- ─── CHAT BUBBLE & PANEL — customer support widget, not for staff/admin ── -->
+  {% if not user.is_authenticated or user.role == 'customer' %}
+  {% include 'chat/chat_panel.html' %}
+  {% endif %}
+
+  <!-- ─── FOOTER — shop footer is customer-only; dashboards stay full-height ── -->
+  {% block footer %}
+  {% if not user.is_authenticated or user.role == 'customer' %}
+  <footer class="bg-brand-navy text-gray-300 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div class="col-span-2 md:col-span-1">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-brand-orange flex items-center justify-center">
+              <span class="text-white font-display font-bold text-sm">JS</span>
+            </div>
+            <span class="font-display font-bold text-xl text-white">JumpStart</span>
+          </div>
+          <p class="text-sm text-gray-400 leading-relaxed">Your smart shopping destination for electronics, fashion, and more. AI-powered support, 24/7.</p>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-3 text-sm">Shop</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/products/?category=electronics" class="hover:text-brand-orange transition-colors">Electronics</a></li>
+            <li><a href="/products/?category=fashion" class="hover:text-brand-orange transition-colors">Fashion</a></li>
+            <li><a href="/products/?category=accessories" class="hover:text-brand-orange transition-colors">Accessories</a></li>
+            <li><a href="/products/?featured=true" class="hover:text-brand-orange transition-colors">Featured</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-3 text-sm">Support</h4>
+          <ul class="space-y-2 text-sm">
+            <li><button onclick="window.dispatchEvent(new CustomEvent('open-chat'))" class="hover:text-brand-orange transition-colors">AI Support Chat</button></li>
+            <li><button onclick="demoAction('Return Policy')" class="hover:text-brand-orange transition-colors">Return Policy</button></li>
+            <li><button onclick="demoAction('Delivery Info')" class="hover:text-brand-orange transition-colors">Delivery Info</button></li>
+            <li><button onclick="demoAction('Warranty Info')" class="hover:text-brand-orange transition-colors">Warranty</button></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-3 text-sm">Company</h4>
+          <ul class="space-y-2 text-sm">
+            <li><button onclick="demoAction('About Us')" class="hover:text-brand-orange transition-colors">About Us</button></li>
+            <li><button onclick="demoAction('Careers')" class="hover:text-brand-orange transition-colors">Careers</button></li>
+            <li><button onclick="demoAction('Privacy Policy')" class="hover:text-brand-orange transition-colors">Privacy Policy</button></li>
+            <li><button onclick="demoAction('Terms of Service')" class="hover:text-brand-orange transition-colors">Terms</button></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-700 mt-10 pt-6 text-xs text-gray-500 text-center">
+        © 2026 JumpStart Retail. All rights reserved. | AI Support powered by JumpStart AI
+      </div>
+    </div>
+  </footer>
+  {% endif %}
+  {% endblock %}
+
+  <!-- ─── NOTIFICATION TOAST ───────────────────────────────────────────── -->
+  <div id="toast-container" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ─── GLOBAL CONFIRM MODAL — use window.confirmModal(message, opts) instead of confirm() ── -->
+  <div x-data="confirmDialog()" x-show="open" x-cloak
+       class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+       @click.self="cancel()" @keydown.escape.window="cancel()">
+    <div x-show="open"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+         class="card w-full max-w-sm p-6">
+      <h3 class="font-display font-bold text-lg text-gray-900 dark:text-white mb-2" x-text="title"></h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6" x-text="message"></p>
+      <div class="flex justify-end gap-3">
+        <button @click="cancel()" class="btn-ghost">Cancel</button>
+        <button @click="confirmAction()" class="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors" x-text="confirmLabel"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SCRIPTS ─────────────────────────────────────────────────────── -->
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- AOS -->
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <!-- Lottie -->
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
+
+  <script>
+    // ─── Global Alpine store ──────────────────────────────────────────────
+    function appShell() {
+      return {
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        cartOpen: false,
+        mobileMenu: false,
+        searchOpen: false,
+        cartItems: JSON.parse(localStorage.getItem('cart') || '[]'),
+
+        get cartCount() { return this.cartItems.reduce((s, i) => s + i.qty, 0); },
+        get cartTotal() { return this.cartItems.reduce((s, i) => s + i.price * i.qty, 0); },
+
+        init() {
+          window.addEventListener('cart-updated', () => {
+            this.cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+            this.$nextTick(() => lucide.createIcons());
+          });
+        },
+
+        toggleDark() {
+          this.darkMode = !this.darkMode;
+          localStorage.setItem('darkMode', this.darkMode);
+        },
+
+        updateCart(id, qty) {
+          if (qty <= 0) { this.removeFromCart(id); return; }
+          const item = this.cartItems.find(i => i.id === id);
+          if (item) { item.qty = qty; this._saveCart(); }
+        },
+        removeFromCart(id) {
+          this.cartItems = this.cartItems.filter(i => i.id !== id);
+          this._saveCart();
+        },
+        _saveCart() {
+          localStorage.setItem('cart', JSON.stringify(this.cartItems));
+        },
+      };
+    }
+
+    // ─── Auth Manager ─────────────────────────────────────────────────────
+    const authManager = {
+      token: localStorage.getItem('access_token'),
+      refreshToken: localStorage.getItem('refresh_token'),
+
+      // Reads user profile stored in localStorage after login/register
+      get user() {
+        try { const d = localStorage.getItem('user_data'); return d ? JSON.parse(d) : null; } catch(e) { return null; }
+      },
+
+      async login(username, password) {
+        const res = await fetch('/api/auth/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('access_token', data.access);
+          localStorage.setItem('refresh_token', data.refresh);
+          this.token = data.access;
+          let user = data.user;
+          if (!user) {
+            try {
+              const meRes = await fetch('/api/auth/me/', { headers: { 'Authorization': `Bearer ${data.access}` } });
+              if (meRes.ok) user = await meRes.json();
+            } catch(e) {}
+          }
+          if (user) localStorage.setItem('user_data', JSON.stringify(user));
+          // Route each role to its own workflow
+          if (user && user.role === 'staff') {
+            window.location.href = '/staff/';
+          } else if (user && user.role === 'admin') {
+            window.location.href = '/admin-panel/';
+          } else {
+            window.location.reload();
+          }
+        }
+        return { ok: res.ok, data };
+      },
+
+      async register(payload) {
+        const res = await fetch('/api/auth/register/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('access_token', data.access);
+          localStorage.setItem('refresh_token', data.refresh);
+          this.token = data.access;
+          // Register response includes user object directly
+          if (data.user) { localStorage.setItem('user_data', JSON.stringify(data.user)); }
+          window.location.reload();
+        }
+        return { ok: res.ok, data };
+      },
+
+      async logout() {
+        try {
+          await fetch('/api/auth/logout/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({ refresh: this.refreshToken }),
+          });
+        } catch(e) {}
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/';
+      },
+
+      async apiFetch(url, options = {}) {
+        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        // Force a real network round-trip — without this, some browsers will
+        // serve a cached copy of a GET (e.g. the session list) right after a
+        // DELETE on the same resource, making a just-deleted row look like it
+        // "came back" on refresh even though it's gone server-side.
+        const res = await fetch(url, { cache: 'no-store', ...options, headers });
+        if (res.status === 401 && this.refreshToken) {
+          const refreshed = await this._refreshToken();
+          if (refreshed) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+            return fetch(url, { cache: 'no-store', ...options, headers });
+          }
+        }
+        return res;
+      },
+
+      async _refreshToken() {
+        try {
+          const res = await fetch('/api/auth/token/refresh/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: this.refreshToken }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('access_token', data.access);
+            this.token = data.access;
+            return true;
+          }
+        } catch {}
+        return false;
+      },
+    };
+
+    // ─── CSRF helper ─────────────────────────────────────────────────────
+    function getCsrfToken() {
+      const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+      return cookie ? cookie.split('=')[1] : '';
+    }
+
+    // ─── Toast notifications ──────────────────────────────────────────────
+    function showToast(message, type = 'info') {
+      const colors = { info: 'bg-brand-navy', success: 'bg-green-600', error: 'bg-red-600', warning: 'bg-amber-500' };
+      const toast = document.createElement('div');
+      toast.className = `${colors[type] || colors.info} text-white text-sm px-5 py-3 rounded-xl shadow-panel pointer-events-auto animate-slide-up max-w-sm`;
+      toast.textContent = message;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    // ─── Product modal ────────────────────────────────────────────────────
+    function openProductModal(slug) {
+      const overlay = document.getElementById('product-modal-overlay');
+      const content = document.getElementById('product-modal-content');
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+      content.innerHTML = '<div class="p-8 text-center"><div class="skeleton h-6 w-48 mx-auto mb-4"></div><div class="skeleton h-4 w-64 mx-auto"></div></div>';
+      htmx.ajax('GET', `/partials/products/${slug}/`, { target: '#product-modal-content', swap: 'innerHTML' });
+    }
+    function closeProductModal() {
+      const overlay = document.getElementById('product-modal-overlay');
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+    }
+
+    // ─── Add to cart — requires auth ─────────────────────────────────────────
+    function addToCart(id, name, price, image) {
+      if (!authManager.user) {
+        showToast('Please sign in to add items to your cart', 'warning');
+        window.dispatchEvent(new CustomEvent('open-auth', { detail: { tab: 'login' } }));
+        return;
+      }
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const existing = cart.find(i => i.id === id);
+      if (existing) { existing.qty += 1; } else { cart.push({ id, name, price, image, qty: 1 }); }
+      localStorage.setItem('cart', JSON.stringify(cart));
+      showToast(`${name} added to cart!`, 'success');
+      window.dispatchEvent(new CustomEvent('cart-updated'));
+    }
+
+    // ─── Scroll reveal ────────────────────────────────────────────────────
+    function initReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      AOS.init({ duration: 600, easing: 'ease-out-cubic', once: true, offset: 80 });
+      lucide.createIcons();
+      initReveal();
+    });
+
+    // Re-init Lucide after HTMX swaps
+    document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
+
+    // ─── HTMX error handling — replace loading skeleton with a friendly error ──
+    document.addEventListener('htmx:responseError', function(e) {
+      const target = e.detail.target;
+      if (target) {
+        target.innerHTML = `
+          <div class="col-span-full py-12 text-center">
+            <i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600"></i>
+            <p class="text-sm text-gray-400 mb-3">Could not load content</p>
+            <button onclick="htmx.trigger(this.closest('[hx-get]') || document.body, 'retry')"
+                    class="btn-ghost text-xs px-3 py-1.5">Try again</button>
+          </div>`;
+        lucide.createIcons();
+      }
+    });
+    document.addEventListener('htmx:sendError', function(e) {
+      const target = e.detail.target;
+      if (target) {
+        target.innerHTML = `
+          <div class="col-span-full py-12 text-center">
+            <i data-lucide="server-off" class="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600"></i>
+            <p class="text-sm text-gray-400">Server unavailable — please check if Django is running</p>
+          </div>`;
+        lucide.createIcons();
+      }
+    });
+
+    // ─── Demo-mode action helper — shows toast for buttons that are UI-only ──
+    function demoAction(label) {
+      showToast(`${label} — this feature is in demo mode and coming soon!`, 'info');
+    }
+
+    // ─── Global confirm modal — replaces browser confirm() dialogs ──────────
+    function confirmDialog() {
+      return {
+        open: false,
+        title: 'Are you sure?',
+        message: '',
+        confirmLabel: 'Delete',
+        _resolve: null,
+        show(opts) {
+          this.title = opts.title || 'Are you sure?';
+          this.message = opts.message || '';
+          this.confirmLabel = opts.confirmLabel || 'Delete';
+          this.open = true;
+          return new Promise((resolve) => { this._resolve = resolve; });
+        },
+        confirmAction() {
+          this.open = false;
+          if (this._resolve) this._resolve(true);
+        },
+        cancel() {
+          this.open = false;
+          if (this._resolve) this._resolve(false);
+        },
+      };
+    }
+    // window.confirmModal('message text', { title, confirmLabel }) -> Promise<boolean>
+    window.confirmModal = (message, opts = {}) => {
+      const el = document.querySelector('[x-data="confirmDialog()"]');
+      if (!el || !window.Alpine) return Promise.resolve(window.confirm(message));
+      return Alpine.$data(el).show({ message, ...opts });
+    };
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

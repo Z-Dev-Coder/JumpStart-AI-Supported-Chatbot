@@ -1,0 +1,18 @@
+Create a colored low-fidelity Balsamiq wireframe for the implemented JumpStart frontend. Do not redesign. Do not create a user-flow diagram. The output must be a screen wireframe that matches the current Django/Tailwind UI.
+
+Use Balsamiq controls: Browser Window, rectangles, labels, buttons, text inputs, dropdowns, tabs, data grids, cards, modals, drawers, accordions, icon placeholders, chat bubbles, badges, skeleton blocks, chart placeholders, and callout notes.
+
+Match these frontend sources: base.html, store/home.html, store/products.html, store/account.html, chat/chat_panel.html, staff/dashboard.html, admin_panel/dashboard.html, partials/auth_modal.html, partials/product_grid.html, partials/product_detail_modal.html, partials/categories.html, partials/category_filters.html.
+
+Style must match JumpStart:
+- Inter-style body text and Poppins-style headings.
+- Orange #FF6B35 for primary CTAs, active nav states, category accents, customer chat bubbles, chatbot launcher, and orange badges.
+- Navy #1A2B4A for hero/footer/staff/admin headers and staff chat bubbles.
+- Gold #FFD700 for rating stars.
+- Light gray page background, white cards, pale gray borders.
+- Dark mode examples can use gray-950 page, gray-900 cards, gray-800 controls.
+- Rounded-lg icon buttons, rounded-xl inputs/buttons, rounded-2xl cards/modals/drawers/chat panels.
+- Soft card shadows and stronger modal/drawer shadows.
+- Use green/amber/red/blue/gray status badges.
+
+Keep the same frontend layout, header order, nav labels, spacing, panel structure, modal placement, drawer placement, and dashboard density. Do not invent pages, nav items, or visual style.

@@ -1,0 +1,15 @@
+{% load static %}
+<button @click="selectCategory('')"
+        :class="activeCategory==='' ? 'bg-brand-orange text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+        class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors">
+  <i data-lucide="grid" class="w-4 h-4 shrink-0"></i>
+  All Categories
+</button>
+{% for cat in categories %}
+<button @click="selectCategory('{{ cat.slug }}')"
+        :class="activeCategory==='{{ cat.slug }}' ? 'bg-brand-orange text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+        class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors">
+  <i data-lucide="{{ cat.icon|default:'tag' }}" class="w-4 h-4 shrink-0"></i>
+  {{ cat.name }}
+</button>
+{% endfor %}

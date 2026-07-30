@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Account — JumpStart Staff{% endblock %}
+
+{% block content %}
+<div x-data="staffAccountPage()" class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Back to dashboard -->
+    <a :href="authManager.user?.role === 'admin' ? '/admin-panel/' : '/staff/'" class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-brand-orange dark:hover:text-brand-orange transition-colors mb-6">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard
+    </a>
+
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-8">
+      <div class="w-14 h-14 rounded-2xl bg-brand-orange flex items-center justify-center text-white font-bold text-xl">
+        <span x-text="userInitials">?</span>
+      </div>
+      <div>
+        <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white" x-text="userName || 'My Account'">My Account</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="userEmail || ''"></p>
+      </div>
+    </div>
+
+    <div class="card p-6">
+      <h2 class="font-display font-bold text-lg text-gray-900 dark:text-white mb-6">Profile Details</h2>
+      <form @submit.prevent="saveProfile()" class="space-y-5">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
+            <input x-model="profile.first_name" type="text" class="input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
+            <input x-model="profile.last_name" type="text" class="input">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+          <input x-model="profile.username" type="text" class="input opacity-60" readonly>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+          <input x-model="profile.email" type="email" class="input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Phone</label>
+          <input x-model="profile.phone" type="tel" class="input" placeholder="+44 7700 000000">
+        </div>
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit" :disabled="profileSaving" class="btn-primary">
+            <span x-show="!profileSaving">Save Changes</span>
+            <span x-show="profileSaving" class="flex items-center gap-2">
+              <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>Saving...
+            </span>
+          </button>
+          <span x-show="profileSaved" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Saved!
+          </span>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function staffAccountPage() {
+  return {
+    profile: {},
+    profileSaving: false,
+    profileSaved: false,
+
+    get userInitials() {
+      const u = authManager.user;
+      if (!u) return '?';
+      return ((u.first_name?.[0] || '') + (u.last_name?.[0] || '')) || u.username?.[0]?.toUpperCase() || '?';
+    },
+    get userName() { return authManager.user ? (authManager.user.first_name + ' ' + authManager.user.last_name).trim() || authManager.user.username : ''; },
+    get userEmail() { return authManager.user?.email || ''; },
+
+    async init() {
+      if (!authManager.token) {
+        window.dispatchEvent(new CustomEvent('open-auth', { detail: { tab: 'login' } }));
+        return;
+      }
+      // Fetch fresh from the server rather than trusting cached localStorage
+      // data — if an admin edited this account (User Management), the
+      // cached copy would otherwise show stale info until next login.
+      const res = await authManager.apiFetch('/api/auth/me/');
+      if (res.ok) {
+        localStorage.setItem('user_data', JSON.stringify(await res.json()));
+      }
+      this.profile = { ...authManager.user };
+    },
+
+    async saveProfile() {
+      this.profileSaving = true;
+      const res = await authManager.apiFetch('/api/auth/me/', {
+        method: 'PATCH',
+        body: JSON.stringify({ first_name: this.profile.first_name, last_name: this.profile.last_name, email: this.profile.email, phone: this.profile.phone }),
+      });
+      if (res.ok) {
+        this.profileSaved = true;
+        setTimeout(() => this.profileSaved = false, 3000);
+      }
+      this.profileSaving = false;
+    },
+  };
+}
+</script>
+{% endblock %}

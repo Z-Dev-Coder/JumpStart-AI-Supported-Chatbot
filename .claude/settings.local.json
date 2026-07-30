@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Recurse \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\frontend\\\\templates\",\"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\frontend\\\\static\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -AutoSize -Wrap)",
+      "PowerShell(Get-ChildItem -Recurse \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\frontend\\\\templates\" | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\backend\" -Directory -Exclude venv,node_modules,__pycache__ | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\frontend\\\\static\" | ForEach-Object { $_.FullName.Replace\\('D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\frontend\\\\static\\\\',''\\) })",
+      "PowerShell(& \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\backend\\\\manage.py\" shell -c \"from django.contrib.auth import get_user_model; U=get_user_model\\(\\); print\\(list\\(U.objects.values_list\\('username','role'\\)\\)\\); from store.models import Product; print\\('products:', Product.objects.count\\(\\)\\)\")",
+      "PowerShell(Get-ChildItem -Recurse \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\backend\\\\store\\\\management\" -File | ForEach-Object { $_.FullName.Split\\('\\\\'\\)[-1] }; Get-ChildItem \"D:\\\\Software Engineering\\\\HDSE\\\\HDSE-CPL-Capstone Project - Application Development\\\\JumpStart\\\\backend\\\\tools\" -File | ForEach-Object { $_.Name })",
+      "Bash(./venv/Scripts/python.exe manage.py shell -c ' *)",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations knowledge)",
+      "Bash(./venv/Scripts/python.exe manage.py migrate knowledge)",
+      "Bash(./venv/Scripts/python.exe manage.py seed_knowledge)",
+      "Bash(./venv/Scripts/python.exe manage.py check)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId=20728\")",
+      "Bash(./venv/Scripts/python.exe e2e_test.py)",
+      "Bash(./backend/venv/Scripts/python.exe -c ' *)",
+      "Bash(./backend/venv/Scripts/pip.exe install *)",
+      "Bash(./venv/Scripts/python.exe e2e_scenarios.py)",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations --check --dry-run)",
+      "Bash(echo \"migrations-check exit: $?\")",
+      "Bash(./venv/Scripts/python.exe manage.py check --deploy)",
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Bash(ls pytest.ini setup.cfg pyproject.toml)",
+      "Bash(grep -l \"def test\" accounts/tests.py store/tests.py chatbot/tests.py staff/tests.py knowledge/tests.py agents/tests.py rag/tests.py tools/tests.py)",
+      "Bash(./venv/Scripts/python.exe manage.py test --settings=config.test_settings)",
+      "Bash(./venv/Scripts/python.exe -)",
+      "Bash(DEBUG=False ./venv/Scripts/python.exe manage.py check --deploy)",
+      "Bash(curl -s http://127.0.0.1:8000/)",
+      "Bash(timeout 45 ./venv/Scripts/python.exe -c ' *)",
+      "Bash(./venv/Scripts/python.exe -u e2e_scenarios.py)",
+      "mcp__visualize__show_widget"
+    ]
+  }
+}

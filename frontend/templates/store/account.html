@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Account — JumpStart{% endblock %}
+
+{% block content %}
+<div x-data="accountPage()" class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-8">
+      <div class="w-14 h-14 rounded-2xl bg-brand-orange flex items-center justify-center text-white font-bold text-xl">
+        <span x-text="userInitials">?</span>
+      </div>
+      <div>
+        <h1 class="font-display text-2xl font-bold text-gray-900 dark:text-white" x-text="userName || 'My Account'">My Account</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="userEmail || ''"></p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- Sidebar nav -->
+      <aside class="lg:col-span-1">
+        <div class="card p-3 space-y-1">
+          <button @click="activeTab='orders'" :class="activeTab==='orders' ? 'nav-item active' : 'nav-item'">
+            <i data-lucide="package" class="w-4 h-4"></i> Orders
+          </button>
+          <button @click="activeTab='profile'" :class="activeTab==='profile' ? 'nav-item active' : 'nav-item'">
+            <i data-lucide="user" class="w-4 h-4"></i> Profile
+          </button>
+          <button @click="activeTab='support'; loadSessions()" :class="activeTab==='support' ? 'nav-item active' : 'nav-item'">
+            <i data-lucide="message-square" class="w-4 h-4"></i> Support History
+          </button>
+          <div class="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+          <button @click="logout()" class="nav-item w-full text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="lg:col-span-3">
+
+        <!-- ── ORDERS TAB ─────────────────────────────────────────────────── -->
+        <div x-show="activeTab === 'orders'">
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="font-display font-bold text-lg text-gray-900 dark:text-white">My Orders</h2>
+              <select x-model="orderFilter" @change="loadOrders()" class="input w-auto py-1.5 text-sm">
+                <option value="">All Orders</option>
+                <option value="processing">Processing</option>
+                <option value="dispatched">Dispatched</option>
+                <option value="delivered">Delivered</option>
+                <option value="return_requested">Return Requested</option>
+              </select>
+            </div>
+
+            <!-- Loading skeleton -->
+            <template x-if="ordersLoading">
+              <div class="space-y-4">
+                <template x-for="i in 3">
+                  <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-3">
+                    <div class="skeleton h-4 w-1/3 rounded"></div>
+                    <div class="skeleton h-3 w-1/4 rounded"></div>
+                    <div class="flex gap-3">
+                      <div class="skeleton w-16 h-16 rounded-lg"></div>
+                      <div class="flex-1 space-y-2">
+                        <div class="skeleton h-4 w-3/4 rounded"></div>
+                        <div class="skeleton h-3 w-1/2 rounded"></div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- Empty state -->
+            <template x-if="!ordersLoading && orders.length === 0">
+              <div class="text-center py-16">
+                <div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+                  <i data-lucide="package-open" class="w-10 h-10 text-gray-400"></i>
+                </div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">No orders yet</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Start shopping to see your orders here.</p>
+                <a href="/products/" class="btn-primary">Shop Now</a>
+              </div>
+            </template>
+
+            <!-- Orders list -->
+            <div class="space-y-4">
+              <template x-for="order in orders" :key="order.id">
+                <div class="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden hover:border-brand-orange/30 transition-colors">
+                  <!-- Order header -->
+                  <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-center gap-4">
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Order ID</p>
+                        <p class="font-mono font-semibold text-sm text-gray-900 dark:text-white" x-text="'#' + order.order_number"></p>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Placed</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300" x-text="formatDate(order.created_at)"></p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span :class="orderStatusClass(order.status)" class="badge text-xs" x-text="order.status_display || order.status"></span>
+                      <p class="font-bold text-gray-900 dark:text-white" x-text="'£' + order.total_amount"></p>
+                    </div>
+                  </div>
+
+                  <!-- Order items -->
+                  <div class="divide-y divide-gray-50 dark:divide-gray-800">
+                    <template x-for="item in order.items" :key="item.id">
+                      <div class="flex items-center gap-4 p-4">
+                        <div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+                          <template x-if="item.product_image">
+                            <img :src="item.product_image" :alt="item.product_name" class="w-full h-full object-cover">
+                          </template>
+                          <template x-if="!item.product_image">
+                            <i data-lucide="package" class="w-6 h-6 text-gray-400"></i>
+                          </template>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="font-medium text-sm text-gray-900 dark:text-white truncate" x-text="item.product_name"></p>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">Qty: <span x-text="item.quantity"></span></p>
+                        </div>
+                        <p class="font-semibold text-sm text-gray-900 dark:text-white shrink-0" x-text="'£' + item.unit_price"></p>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Order actions -->
+                  <div class="flex items-center gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+                    <button @click="viewOrderDetails(order)" class="btn-ghost text-xs py-1.5 px-3">
+                      <i data-lucide="receipt" class="w-3.5 h-3.5"></i> View Details
+                    </button>
+                    <template x-if="order.can_return">
+                      <button @click="openReturnChat(order)" class="btn-ghost text-xs py-1.5 px-3">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Return
+                      </button>
+                    </template>
+                    <template x-if="order.can_cancel">
+                      <button @click="cancelOrder(order)" class="btn-ghost text-xs py-1.5 px-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20">
+                        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancel
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ORDER DETAILS MODAL ──────────────────────────────────────────── -->
+        <div x-show="orderDetailsOpen" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+             @click.self="orderDetailsOpen = false">
+          <div class="card w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto" x-show="orderDetailsOpen" x-transition>
+            <template x-if="selectedOrder">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <h3 class="font-display font-bold text-lg text-gray-900 dark:text-white">Order Details</h3>
+                  <button @click="orderDetailsOpen = false" class="btn-ghost p-1.5 rounded-lg"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <p class="font-mono text-sm text-gray-500 dark:text-gray-400 mb-5" x-text="'#' + selectedOrder.order_number"></p>
+
+                <!-- Status + total -->
+                <div class="flex items-center justify-between mb-5">
+                  <span :class="orderStatusClass(selectedOrder.status)" class="badge text-xs" x-text="selectedOrder.status_display || selectedOrder.status"></span>
+                  <p class="font-bold text-lg text-gray-900 dark:text-white" x-text="'£' + selectedOrder.total_amount"></p>
+                </div>
+
+                <!-- Delivery tracking -->
+                <template x-if="selectedOrder.delivery_tracking">
+                  <div class="rounded-xl border border-gray-100 dark:border-gray-800 p-4 mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <i data-lucide="truck" class="w-4 h-4 text-brand-orange"></i>
+                      <p class="font-semibold text-sm text-gray-900 dark:text-white" x-text="selectedOrder.delivery_tracking.status"></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      <span>Last location</span><span class="text-gray-700 dark:text-gray-300 text-right" x-text="selectedOrder.delivery_tracking.last_location"></span>
+                      <span>Last update</span><span class="text-gray-700 dark:text-gray-300 text-right" x-text="selectedOrder.delivery_tracking.last_update"></span>
+                      <span>Estimated delivery</span><span class="text-gray-700 dark:text-gray-300 text-right" x-text="selectedOrder.delivery_tracking.estimated_delivery"></span>
+                      <template x-if="selectedOrder.delivery_tracking.delay_reason">
+                        <span class="text-amber-600 dark:text-amber-400">Delay reason</span>
+                      </template>
+                      <template x-if="selectedOrder.delivery_tracking.delay_reason">
+                        <span class="text-amber-600 dark:text-amber-400 text-right" x-text="selectedOrder.delivery_tracking.delay_reason"></span>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Key facts -->
+                <div class="space-y-2 text-sm mb-5">
+                  <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Placed on</span>
+                    <span class="text-gray-900 dark:text-white" x-text="formatDate(selectedOrder.created_at)"></span>
+                  </div>
+                  <template x-if="selectedOrder.tracking_number">
+                    <div class="flex justify-between">
+                      <span class="text-gray-500 dark:text-gray-400">Tracking number</span>
+                      <span class="font-mono text-gray-900 dark:text-white" x-text="selectedOrder.tracking_number"></span>
+                    </div>
+                  </template>
+                  <template x-if="selectedOrder.estimated_delivery">
+                    <div class="flex justify-between">
+                      <span class="text-gray-500 dark:text-gray-400">Estimated delivery date</span>
+                      <span class="text-gray-900 dark:text-white" x-text="formatDate(selectedOrder.estimated_delivery)"></span>
+                    </div>
+                  </template>
+                  <template x-if="selectedOrder.shipping_address">
+                    <div class="flex justify-between gap-4">
+                      <span class="text-gray-500 dark:text-gray-400 shrink-0">Delivery address</span>
+                      <span class="text-gray-900 dark:text-white text-right" x-text="selectedOrder.shipping_address"></span>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Items -->
+                <h4 class="font-semibold text-sm text-gray-900 dark:text-white mb-2">Items</h4>
+                <div class="divide-y divide-gray-50 dark:divide-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden mb-5">
+                  <template x-for="item in selectedOrder.items" :key="item.id">
+                    <div class="flex items-center gap-3 p-3">
+                      <div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+                        <template x-if="item.product_image">
+                          <img :src="item.product_image" :alt="item.product_name" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!item.product_image">
+                          <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
+                        </template>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900 dark:text-white truncate" x-text="item.product_name"></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Qty: <span x-text="item.quantity"></span></p>
+                      </div>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white shrink-0" x-text="'£' + item.unit_price"></p>
+                    </div>
+                  </template>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <template x-if="selectedOrder.can_return">
+                    <button @click="orderDetailsOpen = false; openReturnChat(selectedOrder)" class="btn-ghost text-xs py-1.5 px-3">
+                      <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Return
+                    </button>
+                  </template>
+                  <template x-if="selectedOrder.can_cancel">
+                    <button @click="orderDetailsOpen = false; cancelOrder(selectedOrder)" class="btn-ghost text-xs py-1.5 px-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20">
+                      <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancel
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- ── PROFILE TAB ────────────────────────────────────────────────── -->
+        <div x-show="activeTab === 'profile'">
+          <div class="card p-6">
+            <h2 class="font-display font-bold text-lg text-gray-900 dark:text-white mb-6">Profile Details</h2>
+            <form @submit.prevent="saveProfile()" class="space-y-5">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">First Name</label>
+                  <input x-model="profile.first_name" type="text" class="input">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Last Name</label>
+                  <input x-model="profile.last_name" type="text" class="input">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+                <input x-model="profile.username" type="text" class="input" readonly class="opacity-60">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+                <input x-model="profile.email" type="email" class="input">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Phone</label>
+                <input x-model="profile.phone" type="tel" class="input" placeholder="+44 7700 000000">
+              </div>
+              <div class="flex items-center gap-3 pt-2">
+                <button type="submit" :disabled="profileSaving" class="btn-primary">
+                  <span x-show="!profileSaving">Save Changes</span>
+                  <span x-show="profileSaving" class="flex items-center gap-2">
+                    <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>Saving...
+                  </span>
+                </button>
+                <span x-show="profileSaved" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <i data-lucide="check-circle" class="w-4 h-4"></i> Saved!
+                </span>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- ── SUPPORT HISTORY TAB ────────────────────────────────────────── -->
+        <div x-show="activeTab === 'support'">
+          <div class="card p-6">
+            <h2 class="font-display font-bold text-lg text-gray-900 dark:text-white mb-6">Support History</h2>
+            <template x-if="sessionsLoading">
+              <div class="space-y-3">
+                <template x-for="i in 4">
+                  <div class="skeleton h-16 rounded-xl w-full"></div>
+                </template>
+              </div>
+            </template>
+            <div class="space-y-3">
+              <template x-for="session in sessions" :key="session.id">
+                <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4 hover:border-brand-orange/30 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <span :class="{
+                          'badge-green': session.state === 'RESOLVED',
+                          'badge-orange': session.state === 'AI_ACTIVE',
+                          'badge-amber': session.state === 'WAITING_FOR_STAFF',
+                          'badge-navy': session.state === 'HUMAN_ACTIVE'
+                        }" class="text-xs" x-text="session.state.replace('_', ' ')"></span>
+                        <span class="text-xs text-gray-400" x-text="formatDate(session.created_at)"></span>
+                      </div>
+                      <p class="text-sm text-gray-700 dark:text-gray-300" x-text="sessionPreview(session)"></p>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button @click="viewSession(session.id)" class="btn-ghost text-xs py-1.5 px-3">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i> View
+                      </button>
+                      <template x-if="session.state !== 'WAITING_FOR_STAFF' && session.state !== 'HUMAN_ACTIVE'">
+                        <button @click="deleteSession(session)" class="btn-ghost text-xs py-1.5 px-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template x-if="!sessionsLoading && sessions.length === 0">
+                <div class="text-center py-12">
+                  <i data-lucide="message-square-off" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
+                  <p class="text-sm text-gray-400">No support conversations yet</p>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+function accountPage() {
+  return {
+    activeTab: 'orders',
+    orders: [],
+    ordersLoading: true,
+    orderFilter: '',
+    orderDetailsOpen: false,
+    selectedOrder: null,
+    sessions: [],
+    sessionsLoading: false,
+    profile: {},
+    profileSaving: false,
+    profileSaved: false,
+
+    get userInitials() {
+      const u = authManager.user;
+      if (!u) return '?';
+      return ((u.first_name?.[0] || '') + (u.last_name?.[0] || '')) || u.username?.[0]?.toUpperCase() || '?';
+    },
+    get userName() { return authManager.user ? (authManager.user.first_name + ' ' + authManager.user.last_name).trim() || authManager.user.username : ''; },
+    get userEmail() { return authManager.user?.email || ''; },
+
+    async init() {
+      if (!authManager.token) {
+        window.dispatchEvent(new CustomEvent('open-auth', { detail: { tab: 'login' } }));
+        return;
+      }
+      await this.loadOrders();
+      // Fetch fresh from the server rather than trusting cached localStorage
+      // data — if an admin edited this account (User Management), the
+      // cached copy would otherwise show stale info until next login.
+      // authManager.user is a getter that reads localStorage on every access,
+      // so updating storage here is what actually refreshes it everywhere.
+      const res = await authManager.apiFetch('/api/auth/me/');
+      if (res.ok) {
+        localStorage.setItem('user_data', JSON.stringify(await res.json()));
+      }
+      this.profile = { ...authManager.user };
+    },
+
+    async loadOrders() {
+      this.ordersLoading = true;
+      const params = this.orderFilter ? `?status=${this.orderFilter}` : '';
+      const res = await authManager.apiFetch(`/api/store/orders/${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        this.orders = data.results || data;
+      }
+      this.ordersLoading = false;
+    },
+
+    async loadSessions() {
+      this.sessionsLoading = true;
+      const res = await authManager.apiFetch('/api/chat/sessions/');
+      if (res.ok) {
+        const data = await res.json();
+        this.sessions = data.results || data;
+      }
+      this.sessionsLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    sessionPreview(session) {
+      const content = session.last_message?.content;
+      return content ? content.substring(0, 80) + '...' : 'Support session';
+    },
+
+    async deleteSession(session) {
+      const ok = await confirmModal('Delete this support conversation? This cannot be undone.', { title: 'Delete conversation', confirmLabel: 'Delete' });
+      if (!ok) return;
+      const res = await authManager.apiFetch(`/api/chat/sessions/${session.id}/`, { method: 'DELETE' });
+      if (res.ok) {
+        this.sessions = this.sessions.filter(s => s.id !== session.id);
+        showToast('Conversation deleted.', 'success');
+      } else {
+        showToast('Could not delete this conversation.', 'error');
+      }
+    },
+
+    async saveProfile() {
+      this.profileSaving = true;
+      const res = await authManager.apiFetch('/api/auth/me/', {
+        method: 'PATCH',
+        body: JSON.stringify({ first_name: this.profile.first_name, last_name: this.profile.last_name, email: this.profile.email, phone: this.profile.phone }),
+      });
+      if (res.ok) {
+        this.profileSaved = true;
+        setTimeout(() => this.profileSaved = false, 3000);
+      }
+      this.profileSaving = false;
+    },
+
+    orderStatusClass(status) {
+      const map = {
+        processing: 'badge-amber', confirmed: 'badge-amber', dispatched: 'badge-navy',
+        out_for_delivery: 'badge-navy', delivered: 'badge-green', cancelled: 'badge-red',
+        return_requested: 'badge-orange', returned: 'badge-gray'
+      };
+      return map[status] || 'badge-gray';
+    },
+
+    formatDate(dt) {
+      if (!dt) return '';
+      return new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    },
+
+    viewOrderDetails(order) {
+      this.selectedOrder = order;
+      this.orderDetailsOpen = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openReturnChat(order) {
+      const chatRoot = document.querySelector('[x-data*="chatManager"]');
+      if (chatRoot && window.Alpine) {
+        const chat = Alpine.$data(chatRoot);
+        chat.open().then(() => {
+          chat.inputText = `I'd like to return my order #${order.order_number}`;
+        });
+      }
+    },
+
+    async cancelOrder(order) {
+      const ok = await confirmModal(`Cancel order #${order.order_number}?`, { title: 'Cancel order', confirmLabel: 'Cancel Order' });
+      if (!ok) return;
+      showToast('Please chat with support to cancel your order.', 'info');
+    },
+
+    viewSession(id) {
+      const chatRoot = document.querySelector('[x-data*="chatManager"]');
+      if (chatRoot && window.Alpine) Alpine.$data(chatRoot).openSession(id);
+    },
+
+    logout() {
+      authManager.logout();
+    },
+  };
+}
+</script>
+{% endblock %}

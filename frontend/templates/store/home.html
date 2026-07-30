@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}JumpStart — Shop Electronics, Fashion & More{% endblock %}
+
+{% block content %}
+
+<!-- ─── HERO SECTION ─────────────────────────────────────────────────────── -->
+<section class="relative min-h-[90vh] flex items-center overflow-hidden bg-brand-navy">
+  <!-- Background gradient + animated shapes -->
+  <div class="absolute inset-0 bg-gradient-to-br from-brand-navy via-brand-navy to-[#0D1B2A]"></div>
+  <div class="absolute top-0 right-0 w-1/2 h-full opacity-10">
+    <div class="absolute top-20 right-10 w-96 h-96 rounded-full bg-brand-orange blur-3xl animate-pulse"></div>
+    <div class="absolute bottom-20 right-40 w-64 h-64 rounded-full bg-brand-gold blur-2xl animate-pulse" style="animation-delay:1.5s"></div>
+  </div>
+  <!-- Abstract product silhouettes -->
+  <div class="absolute right-0 top-0 bottom-0 w-[55%] hidden lg:block overflow-hidden">
+    <img src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=900&auto=format&fit=crop&q=80"
+         alt="" class="h-full w-full object-cover opacity-30 scale-110" aria-hidden="true">
+    <div class="absolute inset-0 bg-gradient-to-r from-brand-navy to-transparent"></div>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 w-full">
+    <div class="max-w-xl">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-orange/20 border border-brand-orange/30 mb-6 animate-fade-in">
+        <span class="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
+        <span class="text-brand-orange text-xs font-semibold uppercase tracking-wide">New Season Arrivals</span>
+      </div>
+
+      <h1 class="font-display text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 animate-slide-up" style="animation-delay:0.1s">
+        Shop Smart,<br>
+        <span class="text-brand-orange">Live Better</span>
+      </h1>
+      <p class="text-gray-300 text-lg leading-relaxed mb-8 animate-slide-up" style="animation-delay:0.2s">
+        Discover electronics, fashion, and accessories — all in one place. Free returns, fast delivery, and 24/7 AI support.
+      </p>
+
+      <div class="flex flex-wrap gap-4 animate-slide-up" style="animation-delay:0.3s">
+        <a href="/products/" class="btn-primary text-base px-7 py-3 shadow-lg shadow-brand-orange/30 hover:shadow-brand-orange/50">
+          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+          Shop Now
+        </a>
+        <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-chat'))"
+                class="inline-flex items-center gap-2 px-7 py-3 rounded-xl border-2 border-white/30 text-white font-semibold text-base hover:bg-white/10 hover:border-white/50 transition-all duration-200">
+          <i data-lucide="message-circle" class="w-5 h-5"></i>
+          Chat with Support
+        </button>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="flex gap-8 mt-12 animate-slide-up" style="animation-delay:0.4s">
+        <div>
+          <p class="text-3xl font-display font-bold text-white">50K+</p>
+          <p class="text-gray-400 text-sm">Happy Customers</p>
+        </div>
+        <div class="w-px bg-white/10"></div>
+        <div>
+          <p class="text-3xl font-display font-bold text-white">2000+</p>
+          <p class="text-gray-400 text-sm">Products</p>
+        </div>
+        <div class="w-px bg-white/10"></div>
+        <div>
+          <p class="text-3xl font-display font-bold text-white">4.8★</p>
+          <p class="text-gray-400 text-sm">Avg Rating</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-400 animate-bounce">
+    <span class="text-xs">Scroll</span>
+    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+  </div>
+</section>
+
+<!-- ─── FEATURED CATEGORIES ───────────────────────────────────────────────── -->
+<section class="py-16 bg-white dark:bg-gray-950">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-end justify-between mb-8 reveal">
+      <div>
+        <p class="text-brand-orange text-sm font-semibold uppercase tracking-wide mb-1">Browse by Category</p>
+        <h2 class="font-display text-3xl font-bold text-gray-900 dark:text-white">What are you looking for?</h2>
+      </div>
+      <a href="/products/" class="text-sm font-medium text-brand-orange hover:underline flex items-center gap-1">
+        All products <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+
+    <!-- Categories via HTMX partial -->
+    <div id="categories-grid"
+         hx-get="/partials/categories/"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 reveal reveal-delay-1">
+      <!-- Skeleton placeholders -->
+      {% for i in "123456" %}
+      <div class="flex flex-col items-center gap-3 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
+        <div class="skeleton w-14 h-14 rounded-2xl"></div>
+        <div class="skeleton h-4 w-20 rounded"></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ─── TRENDING PRODUCTS ─────────────────────────────────────────────────── -->
+<section class="py-16 bg-gray-50 dark:bg-gray-900">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-end justify-between mb-8 reveal">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
+          <p class="text-brand-orange text-sm font-semibold uppercase tracking-wide">🔥 Hot Right Now</p>
+        </div>
+        <h2 class="font-display text-3xl font-bold text-gray-900 dark:text-white">Trending Products</h2>
+      </div>
+      <a href="/products/?featured=true" class="text-sm font-medium text-brand-orange hover:underline flex items-center gap-1">
+        View all <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+
+    <!-- Horizontal scroll carousel -->
+    <div class="relative">
+      <div id="trending-products"
+           hx-get="/partials/products/?featured=true&limit=8&view_mode=carousel"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin reveal reveal-delay-1"
+           style="-webkit-overflow-scrolling: touch;">
+        <!-- Skeleton carousel cards -->
+        {% for i in "12345678" %}
+        <div class="snap-start flex-shrink-0 w-60 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm pointer-events-none">
+          <div class="skeleton h-44 w-full rounded-t-2xl rounded-b-none"></div>
+          <div class="p-4 space-y-2">
+            <div class="skeleton h-3 w-16 rounded"></div>
+            <div class="skeleton h-4 w-3/4 rounded"></div>
+            <div class="skeleton h-3 w-20 rounded"></div>
+            <div class="skeleton h-8 w-full rounded-xl mt-1"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PROMOTION BANNER ──────────────────────────────────────────────────── -->
+<section class="py-12 bg-white dark:bg-gray-950">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-orange to-[#FF8C5A] p-8 lg:p-12 reveal">
+      <!-- Background shapes -->
+      <div class="absolute top-0 right-0 w-72 h-72 rounded-full bg-white/10 -translate-y-1/4 translate-x-1/4"></div>
+      <div class="absolute bottom-0 right-32 w-48 h-48 rounded-full bg-white/5"></div>
+
+      <div class="relative flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div class="text-white text-center lg:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white/90 text-xs font-semibold uppercase tracking-wide mb-4">
+            ⚡ Limited Time Offer
+          </div>
+          <h2 class="font-display text-4xl lg:text-5xl font-extrabold mb-3">Up to 40% OFF</h2>
+          <p class="text-white/80 text-lg mb-6 max-w-md">Electronics, clothing, and accessories on sale this week only. Don't miss out!</p>
+          <a href="/products/" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-white text-brand-orange font-bold text-sm hover:bg-gray-50 active:scale-95 transition-all shadow-lg">
+            Claim Offer <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </a>
+        </div>
+        <div class="hidden lg:block shrink-0">
+          <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=280&auto=format&fit=crop&q=80"
+               alt="Sale items" class="w-64 h-48 object-cover rounded-2xl shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── NEW ARRIVALS ───────────────────────────────────────────────────────── -->
+<section class="py-16 bg-white dark:bg-gray-950">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-end justify-between mb-8 reveal">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <p class="text-green-600 dark:text-green-400 text-sm font-semibold uppercase tracking-wide">✨ Fresh In</p>
+        </div>
+        <h2 class="font-display text-3xl font-bold text-gray-900 dark:text-white">New Arrivals</h2>
+      </div>
+      <a href="/products/?ordering=-created_at" class="text-sm font-medium text-brand-orange hover:underline flex items-center gap-1">
+        See all new <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+
+    <!-- Horizontal scroll carousel -->
+    <div id="new-arrivals"
+         hx-get="/partials/products/?ordering=-created_at&limit=6&view_mode=carousel"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin reveal reveal-delay-1"
+         style="-webkit-overflow-scrolling: touch;">
+      {% for i in "123456" %}
+      <div class="snap-start flex-shrink-0 w-60 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm pointer-events-none">
+        <div class="skeleton h-44 w-full rounded-t-2xl rounded-b-none"></div>
+        <div class="p-4 space-y-2">
+          <div class="skeleton h-3 w-16 rounded"></div>
+          <div class="skeleton h-4 w-3/4 rounded"></div>
+          <div class="skeleton h-3 w-20 rounded"></div>
+          <div class="skeleton h-8 w-full rounded-xl mt-1"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ─── TRUST BADGES ──────────────────────────────────────────────────────── -->
+<section class="py-12 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 reveal">
+      <div class="flex flex-col items-center text-center gap-3 group">
+        <div class="w-14 h-14 rounded-2xl bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange group-hover:text-white transition-all duration-300">
+          <i data-lucide="truck" class="w-7 h-7 text-brand-orange group-hover:text-white transition-colors"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Free Delivery</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">On orders over $50</p>
+        </div>
+      </div>
+      <div class="flex flex-col items-center text-center gap-3 group">
+        <div class="w-14 h-14 rounded-2xl bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange transition-all duration-300">
+          <i data-lucide="rotate-ccw" class="w-7 h-7 text-brand-orange group-hover:text-white transition-colors"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Easy Returns</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">30-day hassle-free returns</p>
+        </div>
+      </div>
+      <div class="flex flex-col items-center text-center gap-3 group">
+        <div class="w-14 h-14 rounded-2xl bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange transition-all duration-300">
+          <i data-lucide="shield-check" class="w-7 h-7 text-brand-orange group-hover:text-white transition-colors"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Secure Payment</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">256-bit SSL encrypted</p>
+        </div>
+      </div>
+      <div class="flex flex-col items-center text-center gap-3 group">
+        <div class="w-14 h-14 rounded-2xl bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange transition-all duration-300">
+          <i data-lucide="headphones" class="w-7 h-7 text-brand-orange group-hover:text-white transition-colors"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white text-sm">24/7 AI Support</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Instant help, any time</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── WHY JUMPSTART ─────────────────────────────────────────────────────── -->
+<section class="py-20 bg-brand-navy">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <p class="text-brand-orange text-sm font-semibold uppercase tracking-wide mb-2 reveal">Why Choose Us</p>
+    <h2 class="font-display text-4xl font-bold text-white mb-4 reveal reveal-delay-1">The JumpStart Difference</h2>
+    <p class="text-gray-400 max-w-xl mx-auto mb-12 reveal reveal-delay-2">
+      We combine smart technology with real people to deliver an unmatched shopping experience.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card-flat p-8 bg-white/5 border-white/10 reveal reveal-delay-1">
+        <div class="w-12 h-12 rounded-xl bg-brand-orange flex items-center justify-center mb-5 mx-auto">
+          <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+        </div>
+        <h3 class="font-display font-bold text-white text-lg mb-2">AI-Powered Support</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">Get instant answers from our intelligent agent trained on all our policies, products, and FAQs.</p>
+      </div>
+      <div class="card-flat p-8 bg-white/5 border-white/10 reveal reveal-delay-2">
+        <div class="w-12 h-12 rounded-xl bg-brand-gold flex items-center justify-center mb-5 mx-auto">
+          <i data-lucide="users" class="w-6 h-6 text-brand-navy"></i>
+        </div>
+        <h3 class="font-display font-bold text-white text-lg mb-2">Human Handover</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">When AI can't fully help, a real support agent steps in — with full context, no repeating yourself.</p>
+      </div>
+      <div class="card-flat p-8 bg-white/5 border-white/10 reveal reveal-delay-3">
+        <div class="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center mb-5 mx-auto">
+          <i data-lucide="zap" class="w-6 h-6 text-white"></i>
+        </div>
+        <h3 class="font-display font-bold text-white text-lg mb-2">Instant Resolution</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">Order tracking, return eligibility, refund status — resolved in seconds, not hours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

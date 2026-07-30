@@ -1,0 +1,334 @@
+[
+  {
+    "model": "accounts.user",
+    "pk": 4,
+    "fields": {
+      "username": "demo1",
+      "email": "arjun.menon@gmail.com",
+      "first_name": "Arjun",
+      "last_name": "Menon",
+      "role": "customer",
+      "phone": "+91 91234 56789",
+      "is_staff": false,
+      "is_superuser": false,
+      "is_active": true,
+      "password": "pbkdf2_sha256$1200000$PfSsUIkwlTy3aTsC5spD9C$s2g+hL9w3ywUW+j/G/jWGHXIYbCHSLuY61SAQPjDVp4=",
+      "date_joined": "2024-01-10T00:00:00Z",
+      "created_at": "2024-01-10T00:00:00Z",
+      "last_login": null,
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 5,
+    "fields": {
+      "username": "demo2",
+      "email": "kavya.reddy@gmail.com",
+      "first_name": "Kavya",
+      "last_name": "Reddy",
+      "role": "customer",
+      "phone": "+91 98765 43210",
+      "is_staff": false,
+      "is_superuser": false,
+      "is_active": true,
+      "password": "pbkdf2_sha256$1200000$PfSsUIkwlTy3aTsC5spD9C$s2g+hL9w3ywUW+j/G/jWGHXIYbCHSLuY61SAQPjDVp4=",
+      "date_joined": "2024-01-12T00:00:00Z",
+      "created_at": "2024-01-12T00:00:00Z",
+      "last_login": null,
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 5,
+    "fields": {
+      "order_number": "JS-2026-005",
+      "customer": 4,
+      "status": "dispatched",
+      "total_amount": "799.00",
+      "estimated_delivery": "2026-05-05",
+      "tracking_number": "BD99281733",
+      "shipping_address": "14, Residency Road, Shivajinagar, Bangalore - 560025",
+      "can_cancel": false,
+      "can_return": false,
+      "created_at": "2026-04-26T10:30:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 6,
+    "fields": {
+      "order_number": "JS-2026-006",
+      "customer": 4,
+      "status": "delivered",
+      "total_amount": "189.00",
+      "estimated_delivery": "2026-03-14",
+      "tracking_number": "DL44729103",
+      "shipping_address": "14, Residency Road, Shivajinagar, Bangalore - 560025",
+      "can_cancel": false,
+      "can_return": true,
+      "created_at": "2026-03-11T14:00:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 7,
+    "fields": {
+      "order_number": "JS-2026-007",
+      "customer": 4,
+      "status": "cancelled",
+      "total_amount": "199.00",
+      "estimated_delivery": null,
+      "tracking_number": "",
+      "shipping_address": "14, Residency Road, Shivajinagar, Bangalore - 560025",
+      "can_cancel": false,
+      "can_return": false,
+      "created_at": "2026-04-28T16:45:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 8,
+    "fields": {
+      "order_number": "JS-2026-008",
+      "customer": 4,
+      "status": "processing",
+      "total_amount": "279.99",
+      "estimated_delivery": "2026-05-10",
+      "tracking_number": "",
+      "shipping_address": "14, Residency Road, Shivajinagar, Bangalore - 560025",
+      "can_cancel": true,
+      "can_return": false,
+      "created_at": "2026-04-30T20:00:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 9,
+    "fields": {
+      "order_number": "JS-2026-009",
+      "customer": 5,
+      "status": "dispatched",
+      "total_amount": "349.00",
+      "estimated_delivery": "2026-05-02",
+      "tracking_number": "EK556612309",
+      "shipping_address": "7, Linking Road, Bandra West, Mumbai - 400050",
+      "can_cancel": false,
+      "can_return": false,
+      "created_at": "2026-04-27T11:00:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 10,
+    "fields": {
+      "order_number": "JS-2026-010",
+      "customer": 5,
+      "status": "return_requested",
+      "total_amount": "1799.00",
+      "estimated_delivery": "2026-03-05",
+      "tracking_number": "BD77412390",
+      "shipping_address": "7, Linking Road, Bandra West, Mumbai - 400050",
+      "can_cancel": false,
+      "can_return": true,
+      "created_at": "2026-03-01T08:30:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 11,
+    "fields": {
+      "order_number": "JS-2026-011",
+      "customer": 5,
+      "status": "out_for_delivery",
+      "total_amount": "34.99",
+      "estimated_delivery": "2026-04-27",
+      "tracking_number": "BD10293847",
+      "shipping_address": "7, Linking Road, Bandra West, Mumbai - 400050",
+      "can_cancel": false,
+      "can_return": false,
+      "created_at": "2026-04-25T17:10:00Z"
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 6,
+    "fields": {
+      "order": 5,
+      "product": 3,
+      "product_name": "Samsung 55\" 4K QLED Smart TV",
+      "quantity": 1,
+      "unit_price": "799.00",
+      "purchase_channel": "online",
+      "days_since_purchase": 12
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 7,
+    "fields": {
+      "order": 6,
+      "product": 6,
+      "product_name": "Premium Wool Blend Coat",
+      "quantity": 1,
+      "unit_price": "189.00",
+      "purchase_channel": "online",
+      "days_since_purchase": 58
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 8,
+    "fields": {
+      "order": 7,
+      "product": 8,
+      "product_name": "Fossil Gen 6 Smartwatch",
+      "quantity": 1,
+      "unit_price": "199.00",
+      "purchase_channel": "online",
+      "days_since_purchase": 0
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 9,
+    "fields": {
+      "order": 8,
+      "product": 1,
+      "product_name": "Sony WH-1000XM5 Wireless Headphones",
+      "quantity": 1,
+      "unit_price": "279.99",
+      "purchase_channel": "online",
+      "days_since_purchase": 0
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 10,
+    "fields": {
+      "order": 9,
+      "product": 12,
+      "product_name": "Adjustable Dumbbell Set (5–52.5 kg)",
+      "quantity": 1,
+      "unit_price": "349.00",
+      "purchase_channel": "online",
+      "days_since_purchase": 3
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 11,
+    "fields": {
+      "order": 10,
+      "product": 4,
+      "product_name": "MacBook Pro 14\" M3 Chip",
+      "quantity": 1,
+      "unit_price": "1799.00",
+      "purchase_channel": "online",
+      "days_since_purchase": 69
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 12,
+    "fields": {
+      "order": 11,
+      "product": 13,
+      "product_name": "Scented Soy Candle Set — 3 Pack",
+      "quantity": 1,
+      "unit_price": "34.99",
+      "purchase_channel": "in_store",
+      "days_since_purchase": 13
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 12,
+    "fields": {
+      "order_number": "JS-2026-012",
+      "customer": 1,
+      "status": "delivered",
+      "total_amount": "89.99",
+      "estimated_delivery": "2026-02-20",
+      "tracking_number": "DL88103742",
+      "shipping_address": "23, Anna Salai, Teynampet, Chennai - 600018",
+      "can_cancel": false,
+      "can_return": true,
+      "created_at": "2026-02-16T09:15:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 13,
+    "fields": {
+      "order_number": "JS-2026-013",
+      "customer": 1,
+      "status": "cancelled",
+      "total_amount": "35.99",
+      "estimated_delivery": null,
+      "tracking_number": "",
+      "shipping_address": "23, Anna Salai, Teynampet, Chennai - 600018",
+      "can_cancel": false,
+      "can_return": false,
+      "created_at": "2026-04-28T16:45:00Z"
+    }
+  },
+  {
+    "model": "store.mockorder",
+    "pk": 14,
+    "fields": {
+      "order_number": "JS-2026-014",
+      "customer": 1,
+      "status": "processing",
+      "total_amount": "15.99",
+      "estimated_delivery": "2026-05-06",
+      "tracking_number": "",
+      "shipping_address": "23, Anna Salai, Teynampet, Chennai - 600018",
+      "can_cancel": true,
+      "can_return": false,
+      "created_at": "2026-05-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 13,
+    "fields": {
+      "order": 12,
+      "product": 7,
+      "product_name": "Running Trainers — Air Boost Pro",
+      "quantity": 1,
+      "unit_price": "89.99",
+      "purchase_channel": "online",
+      "days_since_purchase": 82
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 14,
+    "fields": {
+      "order": 13,
+      "product": 10,
+      "product_name": "Anker 65W USB-C Charging Hub",
+      "quantity": 1,
+      "unit_price": "35.99",
+      "purchase_channel": "online",
+      "days_since_purchase": 0
+    }
+  },
+  {
+    "model": "store.mockorderitem",
+    "pk": 15,
+    "fields": {
+      "order": 14,
+      "product": 17,
+      "product_name": "The Design of Everyday Things",
+      "quantity": 1,
+      "unit_price": "15.99",
+      "purchase_channel": "online",
+      "days_since_purchase": 0
+    }
+  }
+]
